@@ -90,7 +90,7 @@ void onInitialization() {
 
 // Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(0, 0, 0, 0);     // background color
+	glClearColor(255, 255, 255, 0);     // background color
 	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
 
 	// Set color to (0, 1, 0) = green
