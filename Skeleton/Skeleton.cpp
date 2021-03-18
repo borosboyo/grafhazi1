@@ -97,11 +97,12 @@ public:
 };
 
 std::vector<vec3> modelVertices;
-std::vector<vec3> graphLines;
 std::vector<vec2> viewVertices;
 int numberOfVertices = 50;
-double percentOfLines = 0.05;
-int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2)* (percentOfLines);
+double percentOfEdges = 0.05;
+int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2)* (percentOfEdges);
+//masodik koord numberOfLines
+vec2 graphEdges[2][61];
 
 class Graph {
 
@@ -132,7 +133,35 @@ public:
 		}
 
 		void initLines() {
-			
+			int nextLine = 0;
+			while (nextLine != numberOfLines) {
+				int firstIndex = rand() * viewVertices.size() / RAND_MAX;
+				int secondIndex = rand() * viewVertices.size() - 1 / RAND_MAX;
+				if (secondIndex >= firstIndex) {
+					++secondIndex;
+				}
+				vec2 firstVertice = viewVertices[firstIndex];
+				vec2 secondVertice = viewVertices[secondIndex];
+				bool checkIfEdgeExists = false;
+
+					for (int ii = 0; ii < numberOfLines; ii++) {
+
+						//Float egyenlõség
+						if (graphEdges[1][ii] == firstVertice && graphEdges[2][ii] == secondVertice) {
+							checkIfEdgeExists = true;
+						}
+						else if (graphEdges[2][ii] == firstVertice && graphEdges[1][ii] == secondVertice) {
+							checkIfEdgeExists = true;
+						}
+					}
+					if (!checkIfEdgeExists) {
+						graphEdges[1][nextLine] = firstVertice;
+						graphEdges[2][nextLine] = secondVertice;
+					}
+
+					nextLine++;
+			}
+
 		}
 
 };
