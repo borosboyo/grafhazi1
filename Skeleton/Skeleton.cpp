@@ -96,21 +96,37 @@ public:
 	}
 };
 
+std::vector<vec3> graphVertices;
+std::vector<vec3> graphLines;
+std::vector<vec2> viewGraph;
 
 class Graph {
-	std::vector<vec3> graphVertices;
-	std::vector<vec3> graphLines;
 
 
+public:
 	Graph() {
-		// 50 random szám
-		//koordok átalakítása
-
+		int temp = 0;
+		float x;
+		float y;
+		float w;
+		while (temp != 50) {
+			float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+			float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+			if (randX * randX + randY * randY <= 1) {
+				viewGraph.push_back(vec2(randX, randY));
+				x = randX / sqrtf(1.0f - randX * randX - randY * randY);
+				y = randY / sqrtf(1.0f - randX * randX - randY * randY);
+				w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
+				graphVertices.push_back(vec3(x, y, w));
+				temp++;
+			}
+		}
 	}
 
 };
 
 InstantRender* renderer;
+Graph* graph;
 const int nTessV = 30;
 std::vector<vec2> circlePoints, userPoints;
 
@@ -122,8 +138,7 @@ void onInitialization() {
 		float fi = ii * 2 *M_PI / nTessV * 1.2;
 		circlePoints.push_back(vec2(cosf(fi), sinf(fi)));
 	}
-
-
+	graph = new Graph();
 
 }
 
@@ -146,8 +161,8 @@ void onDisplay() {
 
 	glBindVertexArray(renderer->getVao());  // Draw call
 	renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
-	renderer->DrawGPU(GL_POINTS, userPoints, vec3(1, 0, 0));
-	renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0.8f, 0.0f));
+	renderer->DrawGPU(GL_POINTS, viewGraph, vec3(1, 0, 0));
+	//renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0.8f, 0.0f));
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
@@ -184,6 +199,9 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_MIDDLE_BUTTON: printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_RIGHT_BUTTON:  printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);  break;
+
+
+
 	}
 
 
