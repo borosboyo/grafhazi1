@@ -96,19 +96,35 @@ public:
 	}
 };
 
+
+class Graph {
+	std::vector<vec3> graphVertices;
+	std::vector<vec3> graphLines;
+
+
+	Graph() {
+		// 50 random szám
+		//koordok átalakítása
+
+	}
+
+};
+
 InstantRender* renderer;
 const int nTessV = 30;
 std::vector<vec2> circlePoints, userPoints;
-std::vector<vec2> graphVertices, graphLines;
 
 
 // Initialization, create an OpenGL context
 void onInitialization() {
 	renderer = new InstantRender();
 	for (int ii = 0; ii < nTessV; ii++) {
-		float fi = ii * 2 *M_PI / nTessV;
+		float fi = ii * 2 *M_PI / nTessV * 1.2;
 		circlePoints.push_back(vec2(cosf(fi), sinf(fi)));
 	}
+
+
+
 }
 
 // Window has become invalid: Redraw
@@ -131,7 +147,7 @@ void onDisplay() {
 	glBindVertexArray(renderer->getVao());  // Draw call
 	renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
 	renderer->DrawGPU(GL_POINTS, userPoints, vec3(1, 0, 0));
-	renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0, 0));
+	renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0.8f, 0.0f));
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
@@ -165,7 +181,7 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	}
 
 	switch (button) {
-	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);   break;
+	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_MIDDLE_BUTTON: printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_RIGHT_BUTTON:  printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);  break;
 	}
@@ -180,6 +196,13 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 		int n = userPoints.size() - 1;
 		glutPostRedisplay();     // redraw
 	}
+
+
+	float x = cX / sqrtf(1.0f - cX * cX - cY * cY);
+	float y = cY / sqrtf(1.0f - cX * cX - cY * cY);;
+	float w = 1.0f / sqrtf(1.0f - cX * cX - cY * cY);;
+
+	printf("X: %3.2f, Y: %3.2f, W: %3.2f\n", x, y, w);
 }
 
 // Idle event indicating that some time elapsed: do animation here
