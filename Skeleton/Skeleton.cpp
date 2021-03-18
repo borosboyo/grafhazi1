@@ -96,32 +96,44 @@ public:
 	}
 };
 
-std::vector<vec3> graphVertices;
+std::vector<vec3> modelVertices;
 std::vector<vec3> graphLines;
-std::vector<vec2> viewGraph;
+std::vector<vec2> viewVertices;
+int numberOfVertices = 50;
+double percentOfLines = 0.05;
+int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2)* (percentOfLines);
 
 class Graph {
 
-
 public:
-	Graph() {
-		int temp = 0;
-		float x;
-		float y;
-		float w;
-		while (temp != 50) {
-			float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-			float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-			if (randX * randX + randY * randY <= 1) {
-				viewGraph.push_back(vec2(randX, randY));
-				x = randX / sqrtf(1.0f - randX * randX - randY * randY);
-				y = randY / sqrtf(1.0f - randX * randX - randY * randY);
-				w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
-				graphVertices.push_back(vec3(x, y, w));
-				temp++;
+		Graph() {
+			initVertices();
+			initLines();
+			
+		}
+
+		void initVertices() {
+			int temp = 0;
+			float x;
+			float y;
+			float w;
+			while (temp != numberOfVertices) {
+				float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+				float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+				if (randX * randX + randY * randY <= 1) {
+					viewVertices.push_back(vec2(randX, randY));
+					x = randX / sqrtf(1.0f - randX * randX - randY * randY);
+					y = randY / sqrtf(1.0f - randX * randX - randY * randY);
+					w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
+					modelVertices.push_back(vec3(x, y, w));
+					temp++;
+				}
 			}
 		}
-	}
+
+		void initLines() {
+			
+		}
 
 };
 
@@ -161,7 +173,7 @@ void onDisplay() {
 
 	glBindVertexArray(renderer->getVao());  // Draw call
 	renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
-	renderer->DrawGPU(GL_POINTS, viewGraph, vec3(1, 0, 0));
+	renderer->DrawGPU(GL_POINTS, viewVertices, vec3(1, 0, 0));
 	//renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0.8f, 0.0f));
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
