@@ -102,49 +102,6 @@ std::vector<vec2> circlePoints, userPoints;
 std::vector<vec2> graphVertices, graphLines;
 
 
-class HyperbolicLine {
-	vec2 center;
-	float radius, phi_p, phi_q;
-public:
-	HyperbolicLine(vec2 p, vec2 q) {
-		float p2 = dot(p, p), q2 = dot(q, q), pq = dot(p, q);
-		float a = (p2 + 1) / 2.0f, b = (q2 + 1) / 2.0f;
-		float denom = (p2 * q2 - pq * pq);
-		if (fabs(denom) > 1e-7) center = (p * (q2 * a - pq * b) + q * (p2 * b - pq * a)) / denom;
-
-		vec2 center2p = p - center, center2q = q - center;
-		radius = length(center2p);
-		phi_p = atan2f(center2p.y, center2p.x);
-		phi_q = atan2f(center2q.y, center2q.x);
-		if (phi_p - phi_q >= M_PI) phi_p -= 2 * M_PI;
-		else if (phi_q - phi_p >= M_PI) phi_q -= 2 * M_PI;
-	}
-
-	std::vector<vec2> getTessellation() {
-		std::vector<vec2> points(nTessV);
-		for (int i = 0; i < nTessV; i++) {
-			float phi = phi_p + (phi_q - phi_p) * (float)i / (nTessV - 1.0f);
-			points[i] = center + vec2(cosf(phi), sinf(phi)) * radius;
-		}
-		return points;
-	}
-
-	vec2 startDir(vec2 p) { return phi_q > phi_p ? normalize(center - p) : -normalize(center - p); }
-
-	float getLength() {
-		float l = -1;
-		vec2 pprev;
-		for (auto p : getTessellation()) {
-			if (l < 0) l = 0;
-			else       l += length(p - pprev) / (1 - dot((p + pprev) / 2, (p + pprev) / 2));
-			pprev = p;
-		}
-		return l;
-	}
-};
-
-
-
 // Initialization, create an OpenGL context
 void onInitialization() {
 	renderer = new InstantRender();
@@ -174,6 +131,7 @@ void onDisplay() {
 	glBindVertexArray(renderer->getVao());  // Draw call
 	renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
 	renderer->DrawGPU(GL_POINTS, userPoints, vec3(1, 0, 0));
+	renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0, 0));
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
