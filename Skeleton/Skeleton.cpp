@@ -34,8 +34,88 @@
 #include "framework.h"
 
 
+vec3 modelVertices[50];
+vec2 viewVertices[50];
+int numberOfVertices = 50;
+double percentOfEdges = 0.05;
+
+//Alapbol 1225, igy 61
+int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2) * (percentOfEdges);
+//masodik koord numberOfLines
+vec2 graphEdges[2][61];
+const int nTessV = 50;
+vec2 circlePoints[50];
+
+
+class Graph {
+
+public:
+	Graph() {
+		initVertices();
+		initLines();
+
+	}
+
+	void initVertices() {
+		int temp = 0;
+		float x;
+		float y;
+		float w;
+		while (temp != numberOfVertices) {
+			float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+			float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
+			if (randX * randX + randY * randY <= 1) {
+				viewVertices[temp] = vec2(randX, randY);
+				x = randX / sqrtf(1.0f - randX * randX - randY * randY);
+				y = randY / sqrtf(1.0f - randX * randX - randY * randY);
+				w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
+				modelVertices[temp] = vec3(x, y, w);
+				temp++;
+			}
+		}
+	}
+
+	void initLines() {
+		int nextLine = 0;
+		while (nextLine != numberOfLines) {
+			int firstIndex = rand() * numberOfVertices / RAND_MAX;
+			int secondIndex = rand() * numberOfVertices - 1 / RAND_MAX;
+			if (secondIndex >= firstIndex) {
+				++secondIndex;
+			}
+			vec2 firstVertice = viewVertices[firstIndex];
+			vec2 secondVertice = viewVertices[secondIndex];
+			bool checkIfEdgeExists = false;
+
+			for (int ii = 0; ii < numberOfLines; ii++) {
+
+				/*
+				if (graphEdges[1][ii] == firstVertice && graphEdges[2][ii] == secondVertice) {
+					checkIfEdgeExists = true;
+				}
+				else if (graphEdges[2][ii] == firstVertice && graphEdges[1][ii] == secondVertice) {
+					checkIfEdgeExists = true;
+				}
+				*/
+			}
+			/*					if (!checkIfEdgeExists) {
+				graphEdges[1][nextLine] = firstVertice;
+				graphEdges[2][nextLine] = secondVertice;
+			}*/
+
+			nextLine++;
+		}
+
+	}
+
+};
+
+unsigned int vao, vbo;
+Graph* graph;
+
 class InstantRender : public GPUProgram {
 
+public:
 	// vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
 	const char* const vertexSource = R"(
 		#version 330				// Shader 3.3
@@ -62,11 +142,7 @@ class InstantRender : public GPUProgram {
 		}
 	)";
 
-	unsigned int vao, vbo;
 
-
-public:
-	
 	InstantRender() {
 		glViewport(0, 0, windowWidth, windowHeight);
 		glLineWidth(2.0f); glPointSize(10.0f);
@@ -74,136 +150,64 @@ public:
 		create(vertexSource, fragmentSource, "outColor");
 		glGenVertexArrays(1, &vao); glBindVertexArray(vao);
 		glGenBuffers(1, &vbo); 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glEnableVertexAttribArray(0);  // attribute array 0
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL);
+		glEnableVertexAttribArray(0);  
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0 , NULL);
+
+		create(vertexSource, fragmentSource, "outColor");
 	}
 
+	void DrawGPU(int type, vec2 vertices[], vec3 color, int size) {
+		setUniform(color, "color");
+
+		//itt lehet size is
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vec2) * size, vertices, GL_STATIC_DRAW);
+		glDrawArrays(type, 0, sizeof(vec2) * size);
+	}
 
 	~InstantRender() {
 		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &vao);
 	}
-
-
-	void DrawGPU(int type, std::vector<vec2> vertices, vec3 color) {
-		setUniform(color, "color");
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vec2), &vertices[0], GL_DYNAMIC_DRAW);
-		glDrawArrays(type, 0, vertices.size());
-	}
-
-	unsigned int getVao() {
-		return vao;
-	}
 };
 
-std::vector<vec3> modelVertices;
-std::vector<vec2> viewVertices;
-int numberOfVertices = 50;
-double percentOfEdges = 0.05;
-int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2)* (percentOfEdges);
-//masodik koord numberOfLines
-vec2 graphEdges[2][61];
 
-class Graph {
 
-public:
-		Graph() {
-			initVertices();
-			initLines();
-			
-		}
-
-		void initVertices() {
-			int temp = 0;
-			float x;
-			float y;
-			float w;
-			while (temp != numberOfVertices) {
-				float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-				float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-				if (randX * randX + randY * randY <= 1) {
-					viewVertices.push_back(vec2(randX, randY));
-					x = randX / sqrtf(1.0f - randX * randX - randY * randY);
-					y = randY / sqrtf(1.0f - randX * randX - randY * randY);
-					w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
-					modelVertices.push_back(vec3(x, y, w));
-					temp++;
-				}
-			}
-		}
-
-		void initLines() {
-			int nextLine = 0;
-			while (nextLine != numberOfLines) {
-				int firstIndex = rand() * viewVertices.size() / RAND_MAX;
-				int secondIndex = rand() * viewVertices.size() - 1 / RAND_MAX;
-				if (secondIndex >= firstIndex) {
-					++secondIndex;
-				}
-				vec2 firstVertice = viewVertices[firstIndex];
-				vec2 secondVertice = viewVertices[secondIndex];
-				bool checkIfEdgeExists = false;
-
-					for (int ii = 0; ii < numberOfLines; ii++) {
-
-						//Float egyenlõség
-						if (graphEdges[1][ii] == firstVertice && graphEdges[2][ii] == secondVertice) {
-							checkIfEdgeExists = true;
-						}
-						else if (graphEdges[2][ii] == firstVertice && graphEdges[1][ii] == secondVertice) {
-							checkIfEdgeExists = true;
-						}
-					}
-					if (!checkIfEdgeExists) {
-						graphEdges[1][nextLine] = firstVertice;
-						graphEdges[2][nextLine] = secondVertice;
-					}
-
-					nextLine++;
-			}
-
-		}
-
-};
-
-InstantRender* renderer;
-Graph* graph;
-const int nTessV = 30;
-std::vector<vec2> circlePoints, userPoints;
-
+InstantRender* gpuProgram;
 
 // Initialization, create an OpenGL context
 void onInitialization() {
-	renderer = new InstantRender();
-	for (int ii = 0; ii < nTessV; ii++) {
-		float fi = ii * 2 *M_PI / nTessV * 1.2;
-		circlePoints.push_back(vec2(cosf(fi), sinf(fi)));
-	}
+
+	gpuProgram = new InstantRender();
 	graph = new Graph();
 
+	for (int ii = 0; ii < nTessV; ii++) {
+		float fi = ii * 2 * M_PI / nTessV;
+		circlePoints[ii] = vec2(cos(fi),sinf(fi));
+	}
 }
 
 // Window has become invalid: Redraw
 void onDisplay() {
 	glClearColor(0, 0, 0, 0);     // background color
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear frame buffer
+	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
 
 	// Set color to (0, 1, 0) = green
-	int location = glGetUniformLocation(renderer->getId(), "color");
-	glUniform3f(location, 0.0f, 1.0f, 0.0f); // 3 floats
+	int location = glGetUniformLocation(gpuProgram->getId(), "color");
+	glUniform3f(location, 0.5f, 0.5f, 0.5f); // 3 floats
 
 	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
 							  0, 1, 0, 0,    // row-major!
 							  0, 0, 1, 0,
 							  0, 0, 0, 1 };
 
-	location = glGetUniformLocation(renderer->getId(), "MVP");	// Get the GPU location of uniform variable MVP
+	location = glGetUniformLocation(gpuProgram->getId(), "MVP");	// Get the GPU location of uniform variable MVP
 	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
 
-	glBindVertexArray(renderer->getVao());  // Draw call
-	renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
-	renderer->DrawGPU(GL_POINTS, viewVertices, vec3(1, 0, 0));
-	//renderer->DrawGPU(GL_LINES, userPoints, vec3(1, 0.8f, 0.0f));
+
+	gpuProgram->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f,0.5f,0.5f),50);
+	gpuProgram->DrawGPU(GL_POINTS, viewVertices, vec3(1.0f, 0.0f, 0.0f),50);
+
+
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
@@ -243,17 +247,6 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 
 
 
-	}
-
-
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {  // GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON and GLUT_DOWN / GLUT_UP
-		printf("px: %d, py: %d\n", pX, pY);
-		float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
-		float cY = 1.0f - 2.0f * pY / windowHeight;
-		if (cX * cX + cY * cY >= 1) return;
-		userPoints.push_back(vec2(cX, cY));
-		int n = userPoints.size() - 1;
-		glutPostRedisplay();     // redraw
 	}
 
 
