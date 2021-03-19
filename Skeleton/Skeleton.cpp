@@ -42,7 +42,7 @@ double percentOfEdges = 0.05;
 //Alapbol 1225, igy 61
 int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2) * (percentOfEdges);
 //masodik koord numberOfLines
-vec2 graphEdges[2][61];
+vec2 graphEdges[61][2];
 const int nTessV = 50;
 vec2 circlePoints[50];
 
@@ -77,35 +77,63 @@ public:
 
 	void initLines() {
 		int nextLine = 0;
+		bool checkIfEdgeExists;
+		int firstIndex, secondIndex;
+		vec2 firstVertice, secondVertice; 
+		/*
 		while (nextLine != numberOfLines) {
-			int firstIndex = rand() * numberOfVertices / RAND_MAX;
-			int secondIndex = rand() * numberOfVertices - 1 / RAND_MAX;
+			firstIndex = rand() * numberOfVertices / RAND_MAX;
+			secondIndex = rand() * numberOfVertices - 1 / RAND_MAX;
 			if (secondIndex >= firstIndex) {
 				++secondIndex;
 			}
-			vec2 firstVertice = viewVertices[firstIndex];
-			vec2 secondVertice = viewVertices[secondIndex];
-			bool checkIfEdgeExists = false;
+			firstVertice = viewVertices[firstIndex];
+			secondVertice = viewVertices[secondIndex];
+			checkIfEdgeExists = false;
 
-			for (int ii = 0; ii < numberOfLines; ii++) {
+			for (int ii = 0; ii < 61; ii++) {
 
-				/*
-				if (graphEdges[1][ii] == firstVertice && graphEdges[2][ii] == secondVertice) {
+				if (isEqual(graphEdges[0][1], firstVertice) && isEqual(graphEdges[1][1], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
-				else if (graphEdges[2][ii] == firstVertice && graphEdges[1][ii] == secondVertice) {
+				else if (isEqual(graphEdges[1][1], firstVertice) && isEqual(graphEdges[0][1], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
-				*/
+
 			}
-			/*					if (!checkIfEdgeExists) {
-				graphEdges[1][nextLine] = firstVertice;
-				graphEdges[2][nextLine] = secondVertice;
-			}*/
+			if (!checkIfEdgeExists) {
+				graphEdges[0][1] = firstVertice;
+				graphEdges[1][1] = secondVertice;
+			}
 
 			nextLine++;
 		}
+		*/
+		firstVertice = viewVertices[45];
+		printf("%3.2f %3.2f\n", firstVertice.x, firstVertice.y);
 
+
+		secondVertice = viewVertices[42];
+		printf("%3.2f %3.2f\n", secondVertice.x, secondVertice.y);
+
+		graphEdges[0][50] = firstVertice;
+		graphEdges[1][50] = secondVertice;
+
+
+		printf("FIRST: %3.2f %3.2f,  SECOND: %3.2f %3.2f ", graphEdges[0][50].x, graphEdges[0][50].y,
+			graphEdges[1][50].x, graphEdges[1][50].y);
+
+
+		
+
+	}
+
+	bool isEqual(vec2 v1, vec2 v2) {
+		float epsilon = 1.19e-7f;
+		if ((fabs(v1.x - v2.x) <= epsilon) && (fabs(v1.y - v2.y) <= epsilon)) {
+			return true;
+		}
+		return false;
 	}
 
 };
@@ -182,7 +210,7 @@ void onInitialization() {
 
 	for (int ii = 0; ii < nTessV; ii++) {
 		float fi = ii * 2 * M_PI / nTessV;
-		circlePoints[ii] = vec2(cos(fi),sinf(fi));
+		circlePoints[ii] = vec2(cosf(fi),sinf(fi));
 	}
 }
 
