@@ -80,8 +80,8 @@ public:
 		bool checkIfEdgeExists;
 		int firstIndex, secondIndex;
 		vec2 firstVertice, secondVertice; 
-		/*
-		while (nextLine != numberOfLines) {
+		
+		while (nextLine != numberOfLines - 1) {
 			firstIndex = rand() * numberOfVertices / RAND_MAX;
 			secondIndex = rand() * numberOfVertices - 1 / RAND_MAX;
 			if (secondIndex >= firstIndex) {
@@ -93,38 +93,21 @@ public:
 
 			for (int ii = 0; ii < 61; ii++) {
 
-				if (isEqual(graphEdges[0][1], firstVertice) && isEqual(graphEdges[1][1], secondVertice)) {
+				if (isEqual(graphEdges[ii][1], firstVertice) && isEqual(graphEdges[ii][1], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
-				else if (isEqual(graphEdges[1][1], firstVertice) && isEqual(graphEdges[0][1], secondVertice)) {
+				else if (isEqual(graphEdges[ii][1], firstVertice) && isEqual(graphEdges[ii][1], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
 
 			}
 			if (!checkIfEdgeExists) {
-				graphEdges[0][1] = firstVertice;
-				graphEdges[1][1] = secondVertice;
+				graphEdges[nextLine][0] = firstVertice;
+				graphEdges[nextLine][1] = secondVertice;
 			}
 
 			nextLine++;
 		}
-		*/
-		firstVertice = viewVertices[45];
-		printf("%3.2f %3.2f\n", firstVertice.x, firstVertice.y);
-
-
-		secondVertice = viewVertices[42];
-		printf("%3.2f %3.2f\n", secondVertice.x, secondVertice.y);
-
-		graphEdges[0][50] = firstVertice;
-		graphEdges[1][50] = secondVertice;
-
-
-		printf("FIRST: %3.2f %3.2f,  SECOND: %3.2f %3.2f ", graphEdges[0][50].x, graphEdges[0][50].y,
-			graphEdges[1][50].x, graphEdges[1][50].y);
-
-
-		
 
 	}
 
