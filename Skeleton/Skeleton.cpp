@@ -77,43 +77,52 @@ public:
 
 	void initLines() {
 		int nextLine = 0;
+
+		int firstIndex;
+		int secondIndex;
+		vec2* firstVertice, *secondVertice; 
 		bool checkIfEdgeExists;
-		int firstIndex, secondIndex;
-		vec2 firstVertice, secondVertice; 
-		
-		while (nextLine != numberOfLines - 1) {
+
+		while (nextLine != numberOfLines -1 ) {
+
 			firstIndex = rand() * numberOfVertices / RAND_MAX;
-			secondIndex = rand() * numberOfVertices - 1 / RAND_MAX;
+			secondIndex = rand() * (numberOfVertices - 1) / RAND_MAX;
 			if (secondIndex >= firstIndex) {
 				++secondIndex;
 			}
-			firstVertice = viewVertices[firstIndex];
-			secondVertice = viewVertices[secondIndex];
+
+			firstVertice = &viewVertices[firstIndex];
+			secondVertice = &viewVertices[secondIndex];
 			checkIfEdgeExists = false;
 
-			for (int ii = 0; ii < 61; ii++) {
-
-				if (isEqual(graphEdges[ii][1], firstVertice) && isEqual(graphEdges[ii][1], secondVertice)) {
+			for (int ii = 0; ii < numberOfVertices; ii++) {
+				if (isEqual(&graphEdges[ii][0], firstVertice) && isEqual(&graphEdges[ii][1], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
-				else if (isEqual(graphEdges[ii][1], firstVertice) && isEqual(graphEdges[ii][1], secondVertice)) {
+				else if (isEqual(&graphEdges[ii][1], firstVertice) && isEqual(&graphEdges[ii][0], secondVertice)) {
 					checkIfEdgeExists = true;
 				}
-
 			}
+
 			if (!checkIfEdgeExists) {
-				graphEdges[nextLine][0] = firstVertice;
-				graphEdges[nextLine][1] = secondVertice;
+				graphEdges[nextLine][0].x = firstVertice->x;
+				graphEdges[nextLine][0].y = firstVertice->y;
+				graphEdges[nextLine][1].x = secondVertice->x;
+				graphEdges[nextLine][1].y = secondVertice->y;
 			}
-
 			nextLine++;
+		}
+
+
+		for (int ii = 0; ii < numberOfVertices; ii++) {
+			printf("F: X:%3.2f, Y:%3.2f   S: X:%3.2f, Y:%3.2f \n", graphEdges[ii][0].x, graphEdges[ii][0].y, graphEdges[ii][1].x, graphEdges[ii][1].y);
 		}
 
 	}
 
-	bool isEqual(vec2 v1, vec2 v2) {
+	bool isEqual(vec2* v1, vec2* v2) {
 		float epsilon = 1.19e-7f;
-		if ((fabs(v1.x - v2.x) <= epsilon) && (fabs(v1.y - v2.y) <= epsilon)) {
+		if ((fabs(v1->x - v2->x) <= epsilon) && (fabs(v1->y - v2->y) <= epsilon)) {
 			return true;
 		}
 		return false;
