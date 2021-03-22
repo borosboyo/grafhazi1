@@ -34,123 +34,23 @@
 #include "framework.h"
 
 
-vec3 modelVertices[50];
-vec2 viewVertices[50];
-int numberOfVertices = 50;
-double percentOfEdges = 0.05;
+// vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
+const char* const vertexSource = R"(
+    #version 330                // Shader 3.3
+    precision highp float;        // normal floats, makes no difference on desktop computers
 
-//Alapbol 1225, igy 61
-int numberOfLines = ((numberOfVertices * (numberOfVertices - 1)) / 2) * (percentOfEdges);
-//masodik koord numberOfLines
-vec2 graphEdges[61][2];
-const int nTessV = 50;
-vec2 circlePoints[50];
+    uniform mat4 MVP;            // uniform variable, the Model-View-Projection transformation matrix
+    layout(location = 0) in vec3 vp;
+    //layout(location = 0) in vec2 vp;    // Varying input: vp = vertex position is expected in attrib array 0
 
+    void main() {
+        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1) * MVP;
+        //gl_Position = vec4(vp.x, vp.y, 0, 1) * MVP;        // transform vp from modeling space to normalized device space
+    }
+)";
 
-class Graph {
-
-public:
-	Graph() {
-		initVertices();
-		initLines();
-
-	}
-
-	void initVertices() {
-		int temp = 0;
-		float x;
-		float y;
-		float w;
-		while (temp != numberOfVertices) {
-			float randX = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-			float randY = (float)rand() / (float)(RAND_MAX / 2) - 1.0f;
-			if (randX * randX + randY * randY <= 1) {
-				viewVertices[temp] = vec2(randX, randY);
-				x = randX / sqrtf(1.0f - randX * randX - randY * randY);
-				y = randY / sqrtf(1.0f - randX * randX - randY * randY);
-				w = 1.0f / sqrtf(1.0f - randX * randX - randY * randY);
-				modelVertices[temp] = vec3(x, y, w);
-				temp++;
-			}
-		}
-	}
-
-	void initLines() {
-		int nextLine = 0;
-
-		int firstIndex;
-		int secondIndex;
-		vec2* firstVertice, *secondVertice; 
-		bool checkIfEdgeExists;
-
-		while (nextLine != numberOfLines -1 ) {
-
-			firstIndex = rand() * numberOfVertices / RAND_MAX;
-			secondIndex = rand() * (numberOfVertices - 1) / RAND_MAX;
-			if (secondIndex >= firstIndex) {
-				++secondIndex;
-			}
-
-			firstVertice = &viewVertices[firstIndex];
-			secondVertice = &viewVertices[secondIndex];
-			checkIfEdgeExists = false;
-
-			for (int ii = 0; ii < numberOfVertices; ii++) {
-				if (isEqual(&graphEdges[ii][0], firstVertice) && isEqual(&graphEdges[ii][1], secondVertice)) {
-					checkIfEdgeExists = true;
-				}
-				else if (isEqual(&graphEdges[ii][1], firstVertice) && isEqual(&graphEdges[ii][0], secondVertice)) {
-					checkIfEdgeExists = true;
-				}
-			}
-
-			if (!checkIfEdgeExists) {
-				graphEdges[nextLine][0].x = firstVertice->x;
-				graphEdges[nextLine][0].y = firstVertice->y;
-				graphEdges[nextLine][1].x = secondVertice->x;
-				graphEdges[nextLine][1].y = secondVertice->y;
-			}
-			nextLine++;
-		}
-
-
-		for (int ii = 0; ii < numberOfVertices; ii++) {
-			printf("F: X:%3.2f, Y:%3.2f   S: X:%3.2f, Y:%3.2f \n", graphEdges[ii][0].x, graphEdges[ii][0].y, graphEdges[ii][1].x, graphEdges[ii][1].y);
-		}
-
-	}
-
-	bool isEqual(vec2* v1, vec2* v2) {
-		float epsilon = 1.19e-7f;
-		if ((fabs(v1->x - v2->x) <= epsilon) && (fabs(v1->y - v2->y) <= epsilon)) {
-			return true;
-		}
-		return false;
-	}
-
-};
-
-unsigned int vao, vbo;
-Graph* graph;
-
-class InstantRender : public GPUProgram {
-
-public:
-	// vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
-	const char* const vertexSource = R"(
-		#version 330				// Shader 3.3
-		precision highp float;		// normal floats, makes no difference on desktop computers
-
-		uniform mat4 MVP;			// uniform variable, the Model-View-Projection transformation matrix
-		layout(location = 0) in vec2 vp;	// Varying input: vp = vertex position is expected in attrib array 0
-
-		void main() {
-			gl_Position = vec4(vp.x, vp.y, 0, 1) * MVP;		// transform vp from modeling space to normalized device space
-		}
-	)";
-
-	// fragment shader in GLSL
-	const char* const fragmentSource = R"(
+// fragment shader in GLSL
+const char* const fragmentSource = R"(
 		#version 330			// Shader 3.3
 		precision highp float;	// normal floats, makes no difference on desktop computers
 	
@@ -162,96 +62,273 @@ public:
 		}
 	)";
 
+GPUProgram gpuProgram;
 
-	InstantRender() {
-		glViewport(0, 0, windowWidth, windowHeight);
-		glLineWidth(2.0f); glPointSize(10.0f);
+class Camera {
+	vec2 wCenter;
+	vec2 wSize;
 
-		create(vertexSource, fragmentSource, "outColor");
-		glGenVertexArrays(1, &vao); glBindVertexArray(vao);
-		glGenBuffers(1, &vbo); 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glEnableVertexAttribArray(0);  
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0 , NULL);
+public:
 
-		create(vertexSource, fragmentSource, "outColor");
+	Camera(vec2 wc = vec2(0,0), vec2 ws = vec2(2,2)) : wCenter(wc), wSize(ws){}
+	mat4 V() {
+		return TranslateMatrix(-wCenter);
+	}
+	mat4 P() {
+		return ScaleMatrix(vec2(2 / wSize.x, 2 / wSize.y));
+	}
+	mat4 Vinv() {
+		return TranslateMatrix(wCenter);
+	}
+	mat4 Pinv() {
+		return ScaleMatrix(vec2(wSize.x / 2, wSize.y / 2));
 	}
 
-	void DrawGPU(int type, vec2 vertices[], vec3 color, int size) {
-		setUniform(color, "color");
 
-		//itt lehet size is
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vec2) * size, vertices, GL_STATIC_DRAW);
-		glDrawArrays(type, 0, sizeof(vec2) * size);
+};
+
+Camera camera;
+
+class Graph {
+protected:
+	unsigned int vao;
+	unsigned int vbo;
+public:
+	Graph() {
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(1, &vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	}
-
-	~InstantRender() {
+	virtual void Draw() = 0;
+	~Graph(){
 		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &vao);
 	}
 };
 
+class Vertice : public Graph {
+private:
+	std::vector<vec3> circlePoints;
+	vec3 center;
+	float r;
+	vec3 color;
+public:
+	Vertice(vec3 newCenter, float newRadius, vec3 newColor) {
+		center = newCenter;
+		r = newRadius;
+		color = newColor;
 
+		for (int ii = 0; ii < 50; ii++) {
+			float fi = float(ii * 2 * M_PI / 50);
+			float x = r * cosf(fi) + center.x;
+			float y = r * sinf(fi) + center.y;
+			float z = sqrtf(x * x + y * y + 1.0f);
+			circlePoints.push_back(vec3(x, y, z));
+		}
 
-InstantRender* gpuProgram;
-
-// Initialization, create an OpenGL context
-void onInitialization() {
-
-	gpuProgram = new InstantRender();
-	graph = new Graph();
-
-	for (int ii = 0; ii < nTessV; ii++) {
-		float fi = ii * 2 * M_PI / nTessV;
-		circlePoints[ii] = vec2(cosf(fi),sinf(fi));
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glBindVertexArray(vao);
 	}
+
+	void Draw() {
+		gpuProgram.setUniform(color, "color");
+		gpuProgram.setUniform(M() * camera.V() * camera.P(), "MVP");
+		glBufferData(GL_ARRAY_BUFFER, circlePoints.size() * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, circlePoints.size());
+	}
+
+	mat4 M() {
+		return mat4{ 1, 0, 0, 0,    // MVP matrix, 
+				     0, 1, 0, 0,    // row-major!
+				     0, 0, 1, 0,
+				     0, 0, 0, 1 };
+	}
+	/*
+	void printCircle() {
+		for (int ii = 0; ii < 50; ii++) {
+			printf("X: %3.2f Y: %3.2f Z: %3.2f\n", circlePoints[ii].x, circlePoints[ii].y, circlePoints[ii].z);
+		}
+	}
+	*/
+	void printCoords() {
+		printf("X: %3.2f Y: %3.2f Z: %3.2f\n", center.x, center.y, center.z);
+	}
+
+
+};
+
+
+class AllVertices {
+private:
+	std::vector<Vertice> allvertices;
+public:
+	AllVertices(float r, vec3 color) {
+		for (int ii = 0; ii < 50; ii++) {
+			float x = ((float)rand() / RAND_MAX) * 2.0f - 1;
+			float y = ((float)rand() / RAND_MAX) * 2.0f - 1;
+			float z = sqrtf(x * x + y * y + 1);
+			Vertice* tmp = new Vertice(vec3(x, y, z), r, color);
+			allvertices.push_back(*tmp);
+		}
+	}
+
+	void DrawVertices() {
+		for (int ii = 0; ii < 50; ii++) {
+			allvertices[ii].Draw();
+		}
+	}
+
+	float multiply(vec3 p1, vec3 p2) {
+		return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+	}
+
+	float d(vec3 p1, vec3 p2) {
+		return acoshf(multiply(p1, p2) * -1.0);
+	}
+	/*
+	std::vector<Vertice> getAllVertices() {
+		return allvertices;
+	}
+
+		void printAllCoords() {
+		for (int ii = 0; ii < 50; ii++) {
+			allvertices[ii].printCoords();
+		}
+	}
+
+	void printOneCircle(int idx) {
+		allvertices[idx].printCircle();
+	}
+
+
+	*/
+
+	mat4 M() {
+		return mat4{ 1, 0, 0, 0,    // MVP matrix, 
+					 0, 1, 0, 0,    // row-major!
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
+	}
+};
+
+
+class Line : public Graph {
+private: 
+	vec3 p1;
+	vec3 p2;
+	vec3 color;
+public:
+	Line() {
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glBindVertexArray(vao);
+	}
+	void Draw() {
+		vec3 line[2] = { p1,p2 };
+		gpuProgram.setUniform(color, "color");
+		gpuProgram.setUniform(M() * camera.V() * camera.P(), "MVP");
+		//lehet itt a size
+		glBufferData(GL_ARRAY_BUFFER, 2 , line, GL_STATIC_DRAW);
+		glLineWidth(2);
+		glDrawArrays(GL_LINES, 0, 2);
+	}
+
+	void setP1P2(vec3 newP1, vec3 newP2) {
+		p1 = newP1;
+		p2 = newP2;
+	}
+
+	mat4 M() {
+		return mat4{ 1, 0, 0, 0,    // MVP matrix, 
+					 0, 1, 0, 0,    // row-major!
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
+	}
+
+};
+
+class AllLines {
+private:
+	std::vector<Line> lines;
+	vec3 color;
+
+public:
+	AllLines(AllVertices vertice, vec3 color) {
+		
+	}
+
+
+	void initLines() {
+
+	}
+
+	void DrawEdges() {
+		for (int ii = 0; ii < lines.size(); ii++) {
+			lines[ii].Draw();
+		}
+	}
+
+	mat4 M() {
+		return mat4{ 1, 0, 0, 0,    // MVP matrix, 
+					 0, 1, 0, 0,    // row-major!
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
+	}
+};
+
+
+AllVertices* vertices;
+AllLines* lines;
+
+std::vector<vec3> random;
+
+void onInitialization() {
+	glViewport(0, 0, windowWidth, windowHeight);
+	glLineWidth(5.0f); glPointSize(5.0f);
+
+
+	vertices = new AllVertices(0.05f, vec3(1.0f, 1.0f, 0.0f));
+	vertices->printAllCoords();
+	vertices->printOneCircle(0);
+
+	//lines = new AllLines(*vertices, 0.05f)
+
+
+
+	gpuProgram.create(vertexSource, fragmentSource, "outColor");
 }
 
-// Window has become invalid: Redraw
+
 void onDisplay() {
-	glClearColor(0, 0, 0, 0);     // background color
-	glClear(GL_COLOR_BUFFER_BIT); // clear frame buffer
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Set color to (0, 1, 0) = green
-	int location = glGetUniformLocation(gpuProgram->getId(), "color");
-	glUniform3f(location, 0.5f, 0.5f, 0.5f); // 3 floats
+	vertices->DrawVertices();
 
-	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
-							  0, 1, 0, 0,    // row-major!
-							  0, 0, 1, 0,
-							  0, 0, 0, 1 };
-
-	location = glGetUniformLocation(gpuProgram->getId(), "MVP");	// Get the GPU location of uniform variable MVP
-	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
-
-
-	gpuProgram->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f,0.5f,0.5f),50);
-	gpuProgram->DrawGPU(GL_POINTS, viewVertices, vec3(1.0f, 0.0f, 0.0f),50);
-
-
-	glutSwapBuffers(); // exchange buffers for double buffering
+	glutSwapBuffers();
 }
 
-// Key of ASCII code pressed
+
 void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'd') glutPostRedisplay();         // if d, invalidate display, i.e. redraw
+	if (key == 'd') glutPostRedisplay();     
 }
 
-// Key of ASCII code released
+
 void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
-// Move mouse with key pressed
-void onMouseMotion(int pX, int pY) {	// pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	// Convert to normalized device space
-	float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
+
+void onMouseMotion(int pX, int pY) {	
+	float cX = 2.0f * pX / windowWidth - 1;	
 	float cY = 1.0f - 2.0f * pY / windowHeight;
 	printf("Mouse moved to (%3.2f, %3.2f)\n", cX, cY);
 }
 
-// Mouse click event
-void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel coordinates of the cursor in the coordinate system of the operation system
-	// Convert to normalized device space
-	float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
+
+void onMouse(int button, int state, int pX, int pY) { 
+	float cX = 2.0f * pX / windowWidth - 1;	
 	float cY = 1.0f - 2.0f * pY / windowHeight;
 
 	char* buttonStat;
@@ -264,9 +341,6 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_MIDDLE_BUTTON: printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
 	case GLUT_RIGHT_BUTTON:  printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);  break;
-
-
-
 	}
 
 
@@ -277,7 +351,7 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 	printf("X: %3.2f, Y: %3.2f, W: %3.2f\n", x, y, w);
 }
 
-// Idle event indicating that some time elapsed: do animation here
+
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
+	long time = glutGet(GLUT_ELAPSED_TIME); 
 }
