@@ -61,8 +61,14 @@ const char* const fragmentSource = R"(
 	uniform vec3 color;		// uniform variable, the color of the primitive
 	out vec4 outColor;		// computed color of the current pixel
 
+	uniform bool hasTexture;
+	
 	void main() {
-		outColor = vec4(color, 1);	// computed color is the color of the primitive
+		if(hasTexture == false){
+			outColor = vec4(color, 1);	// computed color is the color of the primitive
+		}
+		if(hasTexture == true){
+		}
 	}
 )";
 
@@ -132,6 +138,7 @@ public:
 	}
 
 	void Draw() {
+		gpuProgram.setUniform(false, "hasTexture");
 		gpuProgram.setUniform(color, "color");
 		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
 		glBufferData(GL_ARRAY_BUFFER, 50 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
