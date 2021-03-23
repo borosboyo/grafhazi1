@@ -32,6 +32,8 @@
 // negativ elojellel szamoljak el es ezzel parhuzamosan eljaras is indul velem szemben.
 //=============================================================================================
 #include "framework.h"
+#include "time.h"
+
 
 
 // vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
@@ -59,23 +61,14 @@ const char* const fragmentSource = R"(
 	precision highp float;	// normal floats, makes no difference on desktop computers
 	
 	uniform vec3 color;		// uniform variable, the color of the primitive
-	out vec4 outColor;		// computed color of the current pixel
+	out vec4 fragmentColor;		// computed color of the current pixel
 
-	uniform bool hasTexture;
-
-	uniform sampler2D textureUnit;
-	in vec2 texCoord;			// variable input: interpolated texture coordinates
-	out vec4 fragmentColor;		// output that goes to the raster memory as told by glBindFragDataLocation
-	
 	void main() {
-		if(hasTexture != true){
-			outColor = vec4(color, 1);	// computed color is the color of the primitive
-		}
-		else{
-			fragmentColor = texture(textureUnit, texCoord);
-		}
+		fragmentColor = vec4(color, 1);	// computed color is the color of the primitive
+
 	}
 )";
+
 
 GPUProgram gpuProgram;
 
@@ -143,7 +136,6 @@ public:
 	}
 
 	void Draw() {
-		gpuProgram.setUniform(false, "hasTexture");
 		gpuProgram.setUniform(color, "color");
 		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
 		glBufferData(GL_ARRAY_BUFFER, 50 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
@@ -174,9 +166,49 @@ public:
 				     0, 0, 1, 0,
 				     0, 0, 0, 1 };
 	}
+
+	float multiply(vec3 p1, vec3 p2) {
+		if (isnan(p1.x) || isnan(p1.y)) {
+			p1 = { 0.0f,0.0f,1.0f };
+			return 0.0f;
+		}
+		else {
+			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+		}
+		
+	}
+
+	float distance(vec3 p1, vec3 p2) {
+		if (isnan(acoshf(-multiply(p1, p2)))) {
+			return 0.0f;
+		}
+		else {
+			return acoshf(-multiply(p1, p2));
+		}
+	}
+
+	bool isEqual(float f1, float f2) {
+		float epsilon = 1.19e-11f;
+		if ((fabs(f1 - f2) <= epsilon)) {
+			return true;
+		}
+		return false;
+	}
+
+	void Mirror(vec3 m1, vec3 m2) {
+
+		float d1 = distance(m1, center);
+		vec3 v1 = (m1 - center * coshf(d1)) / sinhf(d1);
+		vec3 p1 = center * coshf(2 * d1) + v1 * sinhf(2 * d1);
+		
+		float d2 = distance(p1, m2);
+		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		center = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
+
+		setCirclePoints();
+		Draw();
+	}
 };
-
-
 
 class AllVertices {
 public:
@@ -200,11 +232,60 @@ public:
 	}
 
 	float multiply(vec3 p1, vec3 p2) {
-		return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+		if (isnan(p1.x) || isnan(p1.y)) {
+			p1 = { 0.0f,0.0f,1.0f };
+			return 0.0f;
+		}
+		else {
+			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+		}
+
 	}
 
-	float d(vec3 p1, vec3 p2) {
-		return acoshf(multiply(p1, p2) * -1.0);
+	float distance(vec3 p1, vec3 p2) {
+		if (isnan(acoshf(-multiply(p1, p2)))) {
+			return 0.0f;
+		}
+		else {
+			return acoshf(-multiply(p1, p2));
+		}
+	}
+
+	bool isEqual(float f1, float f2) {
+		float epsilon = 0.01;
+		if ((fabs(f1 - f2) <= epsilon)) {
+			return true;
+		}
+		return false;
+	}
+
+
+	void PushVertices(vec3 q) {
+		//Origo es celpont kozti m pont meghatarozas
+		vec3 p1 = { 0.0f,0.0f,1.0f };
+
+		float d1 = distance(p1, q);
+		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
+		vec3 m1 = p1 * coshf(d1 / 30) + v1 * sinhf(d1 / 30);
+
+		//Lepes ezen az egyenesen 
+		vec3 p2 = p1;
+		float d2 = distance(p2, m1);
+		vec3 v2 = (m1 - p2 * coshf(d2)) / sinhf(d2);
+		vec3 tempP = p2 * coshf(2 * d2) + v2 * sinhf(2 * d2);
+
+		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
+		float d3 = distance(tempP, q);
+		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
+		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
+
+		//printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
+		//printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
+
+
+		for (int ii = 0; ii < 50; ii++) {
+			allVertices[ii].Mirror(m1, m2);
+		}
 	}
 
 	mat4 MVP() {
@@ -222,54 +303,6 @@ public:
 };
 
 
-
-
-/*
-
-
-class VerticeTexture {
-	Texture texture;
-	vec2 uvs[50];
-public:
-	VerticeTexture(int width, int height, const std::vector<vec4>& image, Vertice vertice) {
-		texture.create(width, height, image);
-		for (int ii = 0; ii < 50; ii++) {
-			uvs[ii].x = vertice.circlePoints[ii].x / vertice.circlePoints[ii].z;
-			uvs[ii].y = vertice.circlePoints[ii].y / vertice.circlePoints[ii].z;
-		}
-
-		glGenVertexArrays(1, &vao);
-		glBindVertexArray(vao);
-		glGenBuffers(2, vbo);
-
-		// vertex coordinates: vbo[1] -> Attrib Array 1 -> vertexUV of the vertex shader
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed		
-	}
-
-
-	void Draw() {
-		mat4 MVPTransform = camera.V() * camera.P();
-		gpuProgram.setUniform(true, "hasTexture");
-		gpuProgram.setUniform(MVPTransform, "MVP");
-		gpuProgram.setUniform(texture, "textureUnit");
-
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 50);
-
-	}
-
-};
-
-class AllVerticeTextures {
-
-};
-*/
-
-
-
 AllVertices* verticesContainer;
 
 class Line : public Graph {
@@ -284,9 +317,8 @@ public:
 	}
 	void Draw() {
 		vec3 line[2] = { p1,p2 };
-		gpuProgram.setUniform(false, "hasTexture");
 		gpuProgram.setUniform(color, "color");
-		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
+		gpuProgram.setUniform(camera.V() * camera.P(), "MVP");
 		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
 		glLineWidth(2);
 		glDrawArrays(GL_LINES, 0, 2);
@@ -311,6 +343,44 @@ public:
 					 0, 0, 1, 0,
 					 0, 0, 0, 1 };
 	}
+
+	float multiply(vec3 p1, vec3 p2) {
+		if (isnan(p1.x) || isnan(p1.y)) {
+			p1 = { 0.0f,0.0f,1.0f };
+			return 0.0f;
+		}
+		else {
+			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+		}
+
+	}
+
+	float distance(vec3 p1, vec3 p2) {
+		if (isnan(acoshf(-multiply(p1, p2)))) {
+			return 0.0f;
+		}
+		else {
+			return acoshf(-multiply(p1, p2));
+		}
+	}
+
+	void Mirror(vec3 m1, vec3 m2) {
+		//printf("p1X: %3.2f p1Y: %3.2f p1Z: %3.2f p2X: %3.2f p2Y: %3.2f p2Z: %3.2f \n", p1.x, p1.y, p1.z,p2.x, p2.y, p2.z);
+		//mirrorp1(m1, m2);
+		//printf("Np1X: %3.2f Np1Y: %3.2f Np1Z: %3.2f Np2X: %3.2f Np2Y: %3.2f Np2Z: %3.2f \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+		Draw();
+	}
+
+	void mirrorp1(vec3 m1, vec3 m2){
+		float d1 = distance(m1, this->p1);
+		vec3 v1 = (m1 - this->p1 * coshf(d1)) / sinhf(d1);
+		vec3 p1 = m1 * coshf(2 * d1) + v1 * sinhf(2 * d1);
+
+		float d2 = distance(p1, m2);
+		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		this->p1 = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
+	}
+
 };
 
 class AllLines {
@@ -321,21 +391,21 @@ private:
 
 public:
 	AllLines() {
-		initLines();
+		initRandomLines();
 	}
 
-	void initLines() {
+	void initRandomLines() {
 		int nextLine = 0;
 		vec3 firstVertice, secondVertice;
 		bool checkIfEdgeExists;
 		int firstIndex, secondIndex;
 
-		while (nextLine != 61 - 1) {
-			firstIndex = rand() * 61 / RAND_MAX;
-			secondIndex = rand() * (61 - 1) / RAND_MAX;
-			if (secondIndex >= firstIndex) {
-				++secondIndex;
-			}
+		while (nextLine !=  60) {
+			firstIndex = (rand() * 50) / RAND_MAX;
+			secondIndex = (rand() * (49)) / RAND_MAX;
+			if (secondIndex == firstIndex) 
+				continue;
+
 			firstVertice = verticesContainer->allVertices[firstIndex].getCenter();
 			secondVertice = verticesContainer->allVertices[secondIndex].getCenter();
 			checkIfEdgeExists = false;
@@ -354,11 +424,10 @@ public:
 			}
 			nextLine++;
 		}
-
 	}
 
 	bool isEqual(vec3 v1, vec3 v2) {
-		float epsilon = 1.19e-7f;
+		float epsilon = 1.19e-7f;;
 		if ((fabs(v1.x - v2.x) <= epsilon) && (fabs(v1.y - v2.y) <= epsilon && (fabs(v1.z - v2.z) <= epsilon))) {
 			return true;
 		}
@@ -370,15 +439,59 @@ public:
 			lines[ii].Draw();
 		}
 	}
+
+	float multiply(vec3 p1, vec3 p2) {
+		if (isnan(p1.x) || isnan(p1.y)) {
+			p1 = { 0.0f,0.0f,1.0f };
+			return 0.0f;
+		}
+		else {
+			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+		}
+
+	}
+
+	float distance(vec3 p1, vec3 p2) {
+		if (isnan(acoshf(-multiply(p1, p2)))) {
+			return 0.0f;
+		}
+		else {
+			return acoshf(-multiply(p1, p2));
+		}
+	}
+
+	void PushLines(vec3 q) {
+		//Origo es celpont kozti m pont meghatarozas
+		vec3 p1 = { 0.0f,0.0f,1.0f};
+
+		float d1 = distance(p1, q);
+		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
+		vec3 m1 = p1 * coshf(d1 / 3) + v1 * sinhf(d1 / 3);
+
+		//Lepes ezen az egyenesen 
+		vec3 p2 = p1;
+		float d2 = distance(p2, m1);
+		vec3 v2 = (m1 - p2 * coshf(d2)) / sinhf(d2);
+		vec3 tempP = p2 * coshf(2 * d2) + v2 * sinhf(2 * d2);
+
+		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
+		float d3 = distance(tempP, q);
+		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
+		vec3 m2 = tempP * coshf(d3 / 2) + v3 * sinhf(d3 / 2);
+
+		printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
+		printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
+
+		for (int ii = 0; ii < 61; ii++) {
+			lines[ii].Mirror(m1, m2);
+			//printf("P1X:%3.2f P1Y:%3.2f P1Z:%3.2f P2X:%3.2f P2Y:%3.2f P2Z:%3.2f \n", lines[ii].getP1().x, lines[ii].getP1().y, lines[ii].getP1().y, lines[ii].getP2().x, lines[ii].getP2().y, lines[ii].getP2().y);
+		}
+		printf("--------");
+	}
+
 };
 
-
-
-
-
-
 AllLines* lines;
-
 Line* myLine;
 
 //VerticeTexture* tex;
@@ -386,11 +499,10 @@ Line* myLine;
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(5.0f); glPointSize(5.0f);
-
 	verticesContainer = new AllVertices();
 	lines = new AllLines();
 	//2 db gpuprogram?
-	gpuProgram.create(vertexSource, fragmentSource, "outColor");
+	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
 
 
@@ -403,6 +515,7 @@ void onDisplay() {
 	verticesContainer->DrawVertices();
 
 	glutSwapBuffers();
+
 }
 
 
@@ -415,35 +528,39 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
 
-void onMouseMotion(int pX, int pY) {	
-	float cX = 2.0f * pX / windowWidth - 1;	
+bool mouseLeftPressed = false;
+
+
+void onMouseMotion(int pX, int pY) {
+	float cX = 2.0f * pX / windowWidth - 1;
 	float cY = 1.0f - 2.0f * pY / windowHeight;
-	printf("Mouse moved to (%3.2f, %3.2f)\n", cX, cY);
+	if (mouseLeftPressed) {
+		float x = cX / sqrtf(1 - cX * cX - cY * cY);
+		float y = cY / sqrtf(1 - cX * cX - cY * cY);
+		float z = 1 / sqrtf(1 - cX * cX - cY * cY);
+		//printf("x: %3.2f y: %3.2f z: %3.2f\n", x,y,z);
+		if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
+			verticesContainer->PushVertices(vec3(x, y, z));
+			lines->PushLines(vec3(x, y, z));
+		}
+		
+	}
+	glutPostRedisplay();
 }
 
 
-void onMouse(int button, int state, int pX, int pY) { 
-	float cX = 2.0f * pX / windowWidth - 1;	
+void onMouse(int button, int state, int pX, int pY) {
+	float cX = 2.0f * pX / windowWidth - 1;
 	float cY = 1.0f - 2.0f * pY / windowHeight;
 
-	char* buttonStat;
-	switch (state) {
-	case GLUT_DOWN: buttonStat = "pressed"; break;
-	case GLUT_UP:   buttonStat = "released"; break;
-	}
-
-	switch (button) {
-	case GLUT_LEFT_BUTTON:   printf("Left button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
-	case GLUT_MIDDLE_BUTTON: printf("Middle button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY); break;
-	case GLUT_RIGHT_BUTTON:  printf("Right button %s at (%3.2f, %3.2f)\n", buttonStat, cX, cY);  break;
+	if (button == GLUT_LEFT_BUTTON) {
+		if (state == GLUT_DOWN) {
+			mouseLeftPressed = true;
+		}
+		else mouseLeftPressed = false;
 	}
 
 
-	float x = cX / sqrtf(1.0f - cX * cX - cY * cY);
-	float y = cY / sqrtf(1.0f - cX * cX - cY * cY);;
-	float w = 1.0f / sqrtf(1.0f - cX * cX - cY * cY);;
-
-	printf("X: %3.2f, Y: %3.2f, W: %3.2f\n", x, y, w);
 }
 
 
