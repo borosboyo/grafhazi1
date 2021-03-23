@@ -47,7 +47,8 @@ const char* const vertexSource = R"(
 
     void main() {
 		texCoord = vertexUV;
-        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1) * MVP;
+        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1 ));
+//gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1);
 
     }
 )";
@@ -56,15 +57,20 @@ const char* const vertexSource = R"(
 const char* const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
-	
+
+
+	uniform sampler2D textureUnit;
+	in vec2 texCoord;
+
 	uniform vec3 color;		// uniform variable, the color of the primitive
 	out vec4 fragmentColor;		// computed color of the current pixel
 
+	
 	void main() {
-		fragmentColor = vec4(color, 1);	// computed color is the color of the primitive
-
+		fragmentColor = texture(textureUnit, texCoord); // computed color is the color of the primitive
 	}
 )";
+
 
 
 GPUProgram gpuProgram;
@@ -101,8 +107,20 @@ public:
 };
 
 Camera camera;
+
+
 unsigned int vao;
 unsigned int vbo[2];
+
+class Tex {
+	Texture tex[50];
+
+public:
+
+	Tex() {
+
+	}
+};
 
 class Graph {
 public:
@@ -121,6 +139,8 @@ public:
 
 class Vertice : public Graph {
 public:
+
+	// 16 es 32 kozott legyen
 	vec3 circlePoints[50];
 	vec3 center;
 	float r = 0.05f;
@@ -133,8 +153,6 @@ public:
 	}
 
 	void Draw() {
-		gpuProgram.setUniform(color, "color");
-		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
 		glBufferData(GL_ARRAY_BUFFER, 50 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 50);
 	}
@@ -298,7 +316,6 @@ public:
 
 };
 
-
 AllVertices* verticesContainer;
 
 class Line : public Graph {
@@ -313,8 +330,6 @@ public:
 	}
 	void Draw() {
 		vec3 line[2] = { p1,p2 };
-		gpuProgram.setUniform(color, "color");
-		gpuProgram.setUniform(camera.V() * camera.P(), "MVP");
 		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
 		glLineWidth(2);
 		glDrawArrays(GL_LINES, 0, 2);
@@ -486,14 +501,14 @@ public:
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
 
-		printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
-		printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
+		//printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
+		//printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
 
 		for (int ii = 0; ii < 61; ii++) {
 			lines[ii].Mirror(m1, m2);
 			//printf("P1X:%3.2f P1Y:%3.2f P1Z:%3.2f P2X:%3.2f P2Y:%3.2f P2Z:%3.2f \n", lines[ii].getP1().x, lines[ii].getP1().y, lines[ii].getP1().y, lines[ii].getP2().x, lines[ii].getP2().y, lines[ii].getP2().y);
 		}
-		printf("--------");
+		//printf("--------");
 	}
 
 };
@@ -503,11 +518,32 @@ Line* myLine;
 
 //VerticeTexture* tex;
 
+Texture sample;
+
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(5.0f); glPointSize(5.0f);
 	verticesContainer = new AllVertices();
 	lines = new AllLines();
+
+	std::vector<vec4> data;
+	for (int ii = 0; ii < 100; ii++) {
+		for (int jj = 0; jj < 100; jj++) {
+			int index = (ii * 100 + ii) * 4;
+			if (((ii / 10) + ii / 10) % 2) {
+				//fosszin
+				data.push_back(vec4(1.0, 0.5, 0.5, 1.0));
+			}
+			else {
+				//mas szin
+				data.push_back(vec4(1.0, 0.5, 0.5, 1.0));
+			}
+		}
+	}
+
+	sample.create(100, 100, data);
+	//glutPostRedisplay();
+
 	//2 db gpuprogram?
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
