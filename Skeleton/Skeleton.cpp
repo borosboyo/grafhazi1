@@ -72,7 +72,7 @@ const char* const fragmentSource = R"(
 			outColor = vec4(color, 1);	// computed color is the color of the primitive
 		}
 		else{
-			//fragmentColor = texture(textureUnit, texCoord);
+			fragmentColor = texture(textureUnit, texCoord);
 		}
 	}
 )";
@@ -224,6 +224,8 @@ public:
 
 
 
+/*
+
 
 class VerticeTexture {
 	Texture texture;
@@ -264,6 +266,8 @@ public:
 class AllVerticeTextures {
 
 };
+*/
+
 
 
 AllVertices* verticesContainer;
@@ -283,7 +287,6 @@ public:
 		gpuProgram.setUniform(false, "hasTexture");
 		gpuProgram.setUniform(color, "color");
 		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
-		//lehet itt a size
 		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
 		glLineWidth(2);
 		glDrawArrays(GL_LINES, 0, 2);
@@ -309,7 +312,6 @@ public:
 					 0, 0, 0, 1 };
 	}
 };
-
 
 class AllLines {
 private:
@@ -379,7 +381,7 @@ AllLines* lines;
 
 Line* myLine;
 
-VerticeTexture* tex;
+//VerticeTexture* tex;
 
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
@@ -387,35 +389,8 @@ void onInitialization() {
 
 	verticesContainer = new AllVertices();
 	lines = new AllLines();
-
-	/*
-	
-
-	int width = 128, height = 128;				// create checkerboard texture procedurally
-	std::vector<vec4> image(width * height);
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			float luminance = ((x / 16) % 2) ^ ((y / 16) % 2);
-			image[y * width + x] = vec4(luminance, luminance, luminance, 1);
-		}
-	}
-	tex = new VerticeTexture(width, height, image, vertices->allVertices[0]);
-
-		*/
-
-
-	//lines = new AllLines(*vertices);
-
-	/*
-	myLine = new Line();
-	myLine->setP1P2(vertices->allVertices[0].getCenter(),vertices->allVertices[1].getCenter());
-
-	
-	*/
-
-
-
-	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
+	//2 db gpuprogram?
+	gpuProgram.create(vertexSource, fragmentSource, "outColor");
 }
 
 
@@ -426,10 +401,6 @@ void onDisplay() {
 
 	lines->DrawLines();
 	verticesContainer->DrawVertices();
-
-	//tex->Draw();
-
-	//myLine->Draw();
 
 	glutSwapBuffers();
 }
