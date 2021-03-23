@@ -32,9 +32,6 @@
 // negativ elojellel szamoljak el es ezzel parhuzamosan eljaras is indul velem szemben.
 //=============================================================================================
 #include "framework.h"
-#include "time.h"
-
-
 
 // vertex shader in GLSL: It is a Raw string (C++11) since it contains new line characters
 const char* const vertexSource = R"(
@@ -259,14 +256,13 @@ public:
 		return false;
 	}
 
-
 	void PushVertices(vec3 q) {
 		//Origo es celpont kozti m pont meghatarozas
 		vec3 p1 = { 0.0f,0.0f,1.0f };
 
 		float d1 = distance(p1, q);
 		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
-		vec3 m1 = p1 * coshf(d1 / 30) + v1 * sinhf(d1 / 30);
+		vec3 m1 = p1 * coshf(d1 / 300) + v1 * sinhf(d1 / 300);
 
 		//Lepes ezen az egyenesen 
 		vec3 p2 = p1;
@@ -277,7 +273,7 @@ public:
 		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
 		float d3 = distance(tempP, q);
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
-		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
+		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
 
 		//printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
 		//printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
@@ -366,7 +362,8 @@ public:
 
 	void Mirror(vec3 m1, vec3 m2) {
 		//printf("p1X: %3.2f p1Y: %3.2f p1Z: %3.2f p2X: %3.2f p2Y: %3.2f p2Z: %3.2f \n", p1.x, p1.y, p1.z,p2.x, p2.y, p2.z);
-		//mirrorp1(m1, m2);
+		mirrorp1(m1, m2);
+		mirrorp2(m1, m2);
 		//printf("Np1X: %3.2f Np1Y: %3.2f Np1Z: %3.2f Np2X: %3.2f Np2Y: %3.2f Np2Z: %3.2f \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
 		Draw();
 	}
@@ -374,11 +371,21 @@ public:
 	void mirrorp1(vec3 m1, vec3 m2){
 		float d1 = distance(m1, this->p1);
 		vec3 v1 = (m1 - this->p1 * coshf(d1)) / sinhf(d1);
-		vec3 p1 = m1 * coshf(2 * d1) + v1 * sinhf(2 * d1);
+		vec3 p1 = this->p1 * coshf(2 * d1) + v1 * sinhf(2 * d1);
 
 		float d2 = distance(p1, m2);
 		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
 		this->p1 = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
+	}
+
+	void mirrorp2(vec3 m1, vec3 m2) {
+		float d1 = distance(m1, this->p2);
+		vec3 v1 = (m1 - this->p2 * coshf(d1)) / sinhf(d1);
+		vec3 p1 = this->p2 * coshf(2 * d1) + v1 * sinhf(2 * d1);
+
+		float d2 = distance(p1, m2);
+		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		this->p2 = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
 	}
 
 };
@@ -466,7 +473,7 @@ public:
 
 		float d1 = distance(p1, q);
 		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
-		vec3 m1 = p1 * coshf(d1 / 3) + v1 * sinhf(d1 / 3);
+		vec3 m1 = p1 * coshf(d1 / 300) + v1 * sinhf(d1 / 300);
 
 		//Lepes ezen az egyenesen 
 		vec3 p2 = p1;
@@ -477,7 +484,7 @@ public:
 		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
 		float d3 = distance(tempP, q);
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
-		vec3 m2 = tempP * coshf(d3 / 2) + v3 * sinhf(d3 / 2);
+		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
 
 		printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
 		printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
