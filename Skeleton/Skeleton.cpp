@@ -62,12 +62,17 @@ const char* const fragmentSource = R"(
 	out vec4 outColor;		// computed color of the current pixel
 
 	uniform bool hasTexture;
+
+	uniform sampler2D textureUnit;
+	in vec2 texCoord;			// variable input: interpolated texture coordinates
+	out vec4 fragmentColor;		// output that goes to the raster memory as told by glBindFragDataLocation
 	
 	void main() {
-		if(hasTexture == false){
+		if(hasTexture != true){
 			outColor = vec4(color, 1);	// computed color is the color of the primitive
 		}
-		if(hasTexture == true){
+		else{
+			//fragmentColor = texture(textureUnit, texCoord);
 		}
 	}
 )";
@@ -172,48 +177,6 @@ public:
 };
 
 
-class Line : public Graph {
-	vec3 p1;
-	vec3 p2;
-	vec3 color = vec3(1.0f,1.0f,0.0f);
-public:
-	Line() {
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-		glBindVertexArray(vao);
-	}
-	void Draw() {
-		vec3 line[2] = { p1,p2 };
-		gpuProgram.setUniform(color, "color");
-		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
-		//lehet itt a size
-		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
-		glLineWidth(2);
-		glDrawArrays(GL_LINES, 0, 2);
-	}
-
-	void setP1P2(vec3 newP1, vec3 newP2) {
-		p1 = newP1;
-		p2 = newP2;
-	}
-
-	vec3 getP1() {
-		return p1;
-	}
-
-	vec3 getP2() {
-		return p2;
-	}
-
-	mat4 MVP() {
-		return mat4{ 1, 0, 0, 0,     
-					 0, 1, 0, 0,    
-					 0, 0, 1, 0,
-					 0, 0, 0, 1 };
-	}
-
-};
-
 
 class AllVertices {
 public:
@@ -260,6 +223,94 @@ public:
 
 
 
+
+
+class VerticeTexture {
+	Texture texture;
+	vec2 uvs[50];
+public:
+	VerticeTexture(int width, int height, const std::vector<vec4>& image, Vertice vertice) {
+		texture.create(width, height, image);
+		for (int ii = 0; ii < 50; ii++) {
+			uvs[ii].x = vertice.circlePoints[ii].x / vertice.circlePoints[ii].z;
+			uvs[ii].y = vertice.circlePoints[ii].y / vertice.circlePoints[ii].z;
+		}
+
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(2, vbo);
+
+		// vertex coordinates: vbo[1] -> Attrib Array 1 -> vertexUV of the vertex shader
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
+		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed		
+	}
+
+
+	void Draw() {
+		mat4 MVPTransform = camera.V() * camera.P();
+		gpuProgram.setUniform(true, "hasTexture");
+		gpuProgram.setUniform(MVPTransform, "MVP");
+		gpuProgram.setUniform(texture, "textureUnit");
+
+		glBindVertexArray(vao);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 50);
+
+	}
+
+};
+
+class AllVerticeTextures {
+
+};
+
+
+AllVertices* verticesContainer;
+
+class Line : public Graph {
+	vec3 p1;
+	vec3 p2;
+	vec3 color = vec3(1.0f, 1.0f, 0.0f);
+public:
+	Line() {
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glBindVertexArray(vao);
+	}
+	void Draw() {
+		vec3 line[2] = { p1,p2 };
+		gpuProgram.setUniform(false, "hasTexture");
+		gpuProgram.setUniform(color, "color");
+		gpuProgram.setUniform(MVP() * camera.V() * camera.P(), "MVP");
+		//lehet itt a size
+		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
+		glLineWidth(2);
+		glDrawArrays(GL_LINES, 0, 2);
+	}
+
+	void setP1P2(vec3 newP1, vec3 newP2) {
+		p1 = newP1;
+		p2 = newP2;
+	}
+
+	vec3 getP1() {
+		return p1;
+	}
+
+	vec3 getP2() {
+		return p2;
+	}
+
+	mat4 MVP() {
+		return mat4{ 1, 0, 0, 0,
+					 0, 1, 0, 0,
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
+	}
+};
+
+
 class AllLines {
 private:
 	//1225 grafel lehet osszesen, ennek 5 szazaleka 61
@@ -267,11 +318,11 @@ private:
 	vec3 color;
 
 public:
-	AllLines(AllVertices vertices) {
-		//initLines(vertices);
+	AllLines() {
+		initLines();
 	}
 
-	void initLines(AllVertices vertices) {
+	void initLines() {
 		int nextLine = 0;
 		vec3 firstVertice, secondVertice;
 		bool checkIfEdgeExists;
@@ -283,8 +334,8 @@ public:
 			if (secondIndex >= firstIndex) {
 				++secondIndex;
 			}
-			firstVertice =  vertices.allVertices[firstIndex].getCenter();
-			secondVertice = vertices.allVertices[secondIndex].getCenter();
+			firstVertice = verticesContainer->allVertices[firstIndex].getCenter();
+			secondVertice = verticesContainer->allVertices[secondIndex].getCenter();
 			checkIfEdgeExists = false;
 
 			for (int ii = 0; ii < 50; ii++) {
@@ -317,54 +368,6 @@ public:
 			lines[ii].Draw();
 		}
 	}
-
-	mat4 MVP() {
-		return mat4{ 1, 0, 0, 0,    
-					 0, 1, 0, 0,    
-					 0, 0, 1, 0,
-					 0, 0, 0, 1 };
-	}
-};
-
-
-
-class VerticeTexture {
-	Texture texture;
-	vec2 uvs[50];
-public:
-	VerticeTexture(int width, int height, const std::vector<vec4>& image, Vertice vertice) {
-		texture.create(width, height, image);
-		for (int ii = 0; ii < 50; ii++) {
-			uvs[ii].x = vertice.circlePoints[ii].x / vertice.circlePoints[ii].z;
-			uvs[ii].y = vertice.circlePoints[ii].y / vertice.circlePoints[ii].z;
-		}
-
-		glGenVertexArrays(1, &vao);
-		glBindVertexArray(vao);
-		glGenBuffers(2, vbo);
-
-		// vertex coordinates: vbo[1] -> Attrib Array 1 -> vertexUV of the vertex shader
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // make it active, it is an array
-		glBufferData(GL_ARRAY_BUFFER, sizeof(uvs), uvs, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);     // stride and offset: it is tightly packed		
-	}
-
-
-	void Draw() {
-		mat4 MVPTransform = camera.V() * camera.P();
-		gpuProgram.setUniform(MVPTransform, "MVP");
-		gpuProgram.setUniform(texture, "textureUnit");
-
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 50);
-
-	}
-
-};
-
-class AllVerticeTextures {
-
 };
 
 
@@ -372,12 +375,9 @@ class AllVerticeTextures {
 
 
 
-
-
-
-AllVertices* vertices;
 AllLines* lines;
 
+Line* myLine;
 
 VerticeTexture* tex;
 
@@ -385,8 +385,8 @@ void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(5.0f); glPointSize(5.0f);
 
-	vertices = new AllVertices();
-
+	verticesContainer = new AllVertices();
+	lines = new AllLines();
 
 	/*
 	
@@ -406,6 +406,14 @@ void onInitialization() {
 
 	//lines = new AllLines(*vertices);
 
+	/*
+	myLine = new Line();
+	myLine->setP1P2(vertices->allVertices[0].getCenter(),vertices->allVertices[1].getCenter());
+
+	
+	*/
+
+
 
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
@@ -415,11 +423,13 @@ void onDisplay() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	vertices->DrawVertices();
 
-	//lines->DrawLines();
+	lines->DrawLines();
+	verticesContainer->DrawVertices();
 
 	//tex->Draw();
+
+	//myLine->Draw();
 
 	glutSwapBuffers();
 }
