@@ -376,10 +376,8 @@ public:
 	}
 
 	void Mirror(vec3 m1, vec3 m2) {
-		//printf("p1X: %3.2f p1Y: %3.2f p1Z: %3.2f p2X: %3.2f p2Y: %3.2f p2Z: %3.2f \n", p1.x, p1.y, p1.z,p2.x, p2.y, p2.z);
 		mirrorp1(m1, m2);
 		mirrorp2(m1, m2);
-		//printf("Np1X: %3.2f Np1Y: %3.2f Np1Z: %3.2f Np2X: %3.2f Np2Y: %3.2f Np2Z: %3.2f \n", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
 		Draw();
 	}
 
@@ -501,14 +499,11 @@ public:
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
 
-		//printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
-		//printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
+	
 
 		for (int ii = 0; ii < 61; ii++) {
 			lines[ii].Mirror(m1, m2);
-			//printf("P1X:%3.2f P1Y:%3.2f P1Z:%3.2f P2X:%3.2f P2Y:%3.2f P2Z:%3.2f \n", lines[ii].getP1().x, lines[ii].getP1().y, lines[ii].getP1().y, lines[ii].getP2().x, lines[ii].getP2().y, lines[ii].getP2().y);
 		}
-		//printf("--------");
 	}
 
 };
@@ -532,11 +527,11 @@ void onInitialization() {
 			int index = (ii * 100 + ii) * 4;
 			if (((ii / 10) + ii / 10) % 2) {
 				//fosszin
-				data.push_back(vec4(1.0, 0.5, 0.5, 1.0));
+				data.push_back(vec4(1.0, 0.5, 0, 1.0));
 			}
 			else {
 				//mas szin
-				data.push_back(vec4(1.0, 0.5, 0.5, 1.0));
+				data.push_back(vec4(0.5, 1.0, 0.5, 1.0));
 			}
 		}
 	}
@@ -544,7 +539,6 @@ void onInitialization() {
 	sample.create(100, 100, data);
 	//glutPostRedisplay();
 
-	//2 db gpuprogram?
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
 
@@ -573,7 +567,6 @@ void onKeyboardUp(unsigned char key, int pX, int pY) {
 
 bool mouseLeftPressed = false;
 
-
 void onMouseMotion(int pX, int pY) {
 	float cX = 2.0f * pX / windowWidth - 1;
 	float cY = 1.0f - 2.0f * pY / windowHeight;
@@ -581,7 +574,6 @@ void onMouseMotion(int pX, int pY) {
 		float x = cX / sqrtf(1 - cX * cX - cY * cY);
 		float y = cY / sqrtf(1 - cX * cX - cY * cY);
 		float z = 1 / sqrtf(1 - cX * cX - cY * cY);
-		//printf("x: %3.2f y: %3.2f z: %3.2f\n", x,y,z);
 		if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
 			verticesContainer->PushVertices(vec3(x, y, z));
 			lines->PushLines(vec3(x, y, z));
