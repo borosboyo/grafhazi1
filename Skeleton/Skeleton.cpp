@@ -131,6 +131,8 @@ public:
 		glGenBuffers(1, &vbo[0]);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	}
+
+
 	virtual void Draw() = 0;
 	~Graph() {
 		glDeleteBuffers(1, &vbo[0]);
@@ -474,8 +476,6 @@ public:
 AllLines* lines;
 Line* myLine;
 
-//VerticeTexture* tex;
-
 Texture sample;
 
 void onInitialization() {
@@ -483,6 +483,9 @@ void onInitialization() {
 	glLineWidth(5.0f); glPointSize(5.0f);
 	verticesContainer = new AllVertices();
 	lines = new AllLines();
+
+
+
 
 	std::vector<vec4> data;
 	for (int ii = 0; ii < 100; ii++) {
@@ -500,7 +503,6 @@ void onInitialization() {
 	}
 
 	sample.create(100, 100, data);
-	//glutPostRedisplay();
 
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
