@@ -1,6 +1,4 @@
 ﻿//=============================================================================================
-// Mintaprogram: Zold haromszog. Ervenyes 2019. osztol.
-//
 // A beadott program csak ebben a fajlban lehet, a fajl 1 byte-os ASCII karaktereket tartalmazhat, BOM kihuzando.
 // Tilos:
 // - mast "beincludolni", illetve mas konyvtarat hasznalni
@@ -100,23 +98,16 @@ Camera camera;
 
 
 unsigned int vao;
-unsigned int vbo[2];
 
-/*
-class Tex {
-	Texture tex[50];
-public:
-	Tex() {
-	}
-};
-*/
 
 
 class Graph {
+protected:
+	unsigned int vbo;
 public:
 	virtual void Draw() = 0;
 	~Graph() {
-		glDeleteBuffers(1, &vbo[0]);
+		glDeleteBuffers(1, &vbo);
 		glDeleteVertexArrays(1, &vao);
 	}
 };
@@ -154,8 +145,8 @@ public:
 	void initVertice() {
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(1, &vbo[0]);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		glGenBuffers(1, &vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glBindVertexArray(vao);
@@ -176,7 +167,7 @@ public:
 
 	void setCirclePoints() {
 		for (int ii = 0; ii < 20; ii++) {
-			float fi = ii * 2 * M_PI / 20;
+			float fi = static_cast<float> (ii * 2 * M_PI) / 20.0f;
 			float x = r * cosf(fi) + center.x;
 			float y = r * sinf(fi) + center.y;
 			float z = sqrtf(x * x + y * y + 1.0f);
@@ -202,7 +193,7 @@ public:
 
 	bool isEqual(float f1, float f2) {
 		float epsilon = 1.19e-11f;
-		if ((fabs(f1 - f2) <= epsilon)) {
+		if ((fabsf(f1 - f2) <= epsilon)) {
 			return true;
 		}
 		return false;
@@ -229,8 +220,8 @@ public:
 
 	void initVerticeCoord() {
 		for (int ii = 0; ii < 50; ii++) {
-			float x = ((float)rand() / RAND_MAX) * 2.0f - 1;
-			float y = ((float)rand() / RAND_MAX) * 2.0f - 1;
+			float x = (static_cast<float> (rand()) / RAND_MAX) * 2.0f - 1.0f;
+			float y = (static_cast<float> (rand()) / RAND_MAX) * 2.0f - 1.0f;
 			float z = sqrtf(x * x + y * y + 1);
 			Vertice* tmp = new Vertice();
 			tmp->setCenter(vec3(x, y, z));
@@ -249,7 +240,7 @@ public:
 
 	bool isEqual(float f1, float f2) {
 		float epsilon = 0.01f;
-		if ((fabs(f1 - f2) <= epsilon)) {
+		if ((fabsf(f1 - f2) <= epsilon)) {
 			return true;
 		}
 		return false;
@@ -295,12 +286,12 @@ class Line : public Graph {
 	vec3 p2;
 	vec3 color = vec3(1.0f, 1.0f, 0.0f);
 public:
-	
+
 	void initLine() {
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-		glGenBuffers(1, &vbo[0]);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		glGenBuffers(1, &vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glBindVertexArray(vao);
@@ -334,14 +325,7 @@ public:
 	}
 
 	float multiply(vec3 p1, vec3 p2) {
-		if (isnan(p1.x) || isnan(p1.y)) {
-			p1 = { 0.0f,0.0f,1.0f };
-			return 0.0f;
-		}
-		else {
-			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
-		}
-
+		return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
 	}
 
 	float distance(vec3 p1, vec3 p2) {
@@ -424,7 +408,7 @@ public:
 
 	bool isEqual(vec3 v1, vec3 v2) {
 		float epsilon = 1.19e-7f;;
-		if ((fabs(v1.x - v2.x) <= epsilon) && (fabs(v1.y - v2.y) <= epsilon && (fabs(v1.z - v2.z) <= epsilon))) {
+		if ((fabsf(v1.x - v2.x) <= epsilon) && (fabsf(v1.y - v2.y) <= epsilon && (fabsf(v1.z - v2.z) <= epsilon))) {
 			return true;
 		}
 		return false;
@@ -471,6 +455,18 @@ void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(5.0f); glPointSize(5.0f);
 
+	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
+							  0, 1, 0, 0,    // row-major!
+							  0, 0, 1, 0,
+							  0, 0, 0, 1 };
+
+	int location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
+	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
+
+
+
+
+
 	verticesContainer = new AllVertices();
 	verticesContainer->initVerticeCoord();
 
@@ -481,7 +477,7 @@ void onInitialization() {
 	std::vector<vec4> data;
 	for (int ii = 0; ii < 100; ii++) {
 		for (int jj = 0; jj < 100; jj++) {
-			int index = (ii * 100 + ii) * 4;
+			//int index = (ii * 100 + ii) * 4;
 			if (((ii / 10) + ii / 10) % 2) {
 				//fosszin
 				data.push_back(vec4(1.0, 0.5, 0, 1.0));
@@ -546,7 +542,7 @@ void onMouse(int button, int state, int pX, int pY) {
 	}
 
 }
-		
+
 
 void onIdle() {
 	//long time = glutGet(GLUT_ELAPSED_TIME);
