@@ -1,5 +1,5 @@
 ﻿//=============================================================================================
-// Mintaprogram: Z�ld h�romsz�g. Ervenyes 2019. osztol.
+// Mintaprogram: Zold haromszog. Ervenyes 2019. osztol.
 //
 // A beadott program csak ebben a fajlban lehet, a fajl 1 byte-os ASCII karaktereket tartalmazhat, BOM kihuzando.
 // Tilos:
@@ -18,7 +18,7 @@
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : Boros Gerg�
+// Nev    : Boros Gergo
 // Neptun : IGMEF9
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy
@@ -248,7 +248,7 @@ public:
 
 
 	bool isEqual(float f1, float f2) {
-		float epsilon = 0.01;
+		float epsilon = 0.01f;
 		if ((fabs(f1 - f2) <= epsilon)) {
 			return true;
 		}
@@ -546,8 +546,8 @@ void onMouse(int button, int state, int pX, int pY) {
 	}
 
 }
-
+		
 
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME);
+	//long time = glutGet(GLUT_ELAPSED_TIME);
 }
