@@ -1,5 +1,5 @@
-//=============================================================================================
-// Mintaprogram: Zöld háromszög. Ervenyes 2019. osztol.
+ï»¿//=============================================================================================
+// Mintaprogram: Zï¿½ld hï¿½romszï¿½g. Ervenyes 2019. osztol.
 //
 // A beadott program csak ebben a fajlban lehet, a fajl 1 byte-os ASCII karaktereket tartalmazhat, BOM kihuzando.
 // Tilos:
@@ -18,7 +18,7 @@
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : Boros Gergõ
+// Nev    : Boros Gergï¿½
 // Neptun : IGMEF9
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy
@@ -48,8 +48,6 @@ const char* const vertexSource = R"(
     void main() {
 		texCoord = vertexUV;
         gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1 ));
-//gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1);
-
     }
 )";
 
@@ -79,30 +77,30 @@ class Camera {
 	vec2 wCenter;
 	vec2 wSize;
 public:
-	Camera(vec2 wc = vec2(0,0), vec2 ws = vec2(2,2)) : wCenter(wc), wSize(ws){}
-	mat4 V() { 
+	Camera(vec2 wc = vec2(0, 0), vec2 ws = vec2(2, 2)) : wCenter(wc), wSize(ws) {}
+	mat4 V() {
 		return mat4(1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, 0,
-					-wCenter.x, -wCenter.y, 0, 1);
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			-wCenter.x, -wCenter.y, 0, 1);
 	}
-	mat4 P() { 
+	mat4 P() {
 		return mat4(2 / wSize.x, 0, 0, 0,
-					0, 2 / wSize.y, 0, 0,
-					0, 0, 1, 0,
-					0, 0, 0, 1);
+			0, 2 / wSize.y, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1);
 	}
-	mat4 Vinv() { 
+	mat4 Vinv() {
 		return mat4(1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, 0,
-					wCenter.x, wCenter.y, 0, 1);
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			wCenter.x, wCenter.y, 0, 1);
 	}
-	mat4 Pinv() { 
+	mat4 Pinv() {
 		return mat4(wSize.x / 2, 0, 0, 0,
-					0, wSize.y / 2, 0, 0,
-					0, 0, 1, 0,
-					0, 0, 0, 1);
+			0, wSize.y / 2, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1);
 	}
 };
 
@@ -112,6 +110,7 @@ Camera camera;
 unsigned int vao;
 unsigned int vbo[2];
 
+/*
 class Tex {
 	Texture tex[50];
 
@@ -121,6 +120,8 @@ public:
 
 	}
 };
+*/
+
 
 class Graph {
 public:
@@ -131,17 +132,40 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	}
 	virtual void Draw() = 0;
-	~Graph(){
+	~Graph() {
 		glDeleteBuffers(1, &vbo[0]);
 		glDeleteVertexArrays(1, &vao);
 	}
 };
 
+class Container {
+public:
+
+	float multiply(vec3 p1, vec3 p2) {
+		return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+	}
+
+	float distance(vec3 p1, vec3 p2) {
+		return acoshf(-multiply(p1, p2));
+	}
+
+	virtual void Push(vec3 q) = 0;
+
+	mat4 MVP() {
+		return mat4{ 1, 0, 0, 0,
+					 0, 1, 0, 0,
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
+	}
+
+};
+
+
 class Vertice : public Graph {
 public:
 
 	// 16 es 32 kozott legyen
-	vec3 circlePoints[50];
+	vec3 circlePoints[20];
 	vec3 center;
 	float r = 0.05f;
 	vec3 color = vec3(0.5f, 0.5f, 0.5f);
@@ -153,8 +177,8 @@ public:
 	}
 
 	void Draw() {
-		glBufferData(GL_ARRAY_BUFFER, 50 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 50);
+		glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 20);
 	}
 
 	void setCenter(vec3 newCenter) {
@@ -166,8 +190,8 @@ public:
 	}
 
 	void setCirclePoints() {
-		for (int ii = 0; ii < 50; ii++) {
-			float fi = ii * 2 * M_PI / 50;
+		for (int ii = 0; ii < 20; ii++) {
+			float fi = ii * 2 * M_PI / 20;
 			float x = r * cosf(fi) + center.x;
 			float y = r * sinf(fi) + center.y;
 			float z = sqrtf(x * x + y * y + 1.0f);
@@ -176,30 +200,19 @@ public:
 	}
 
 	mat4 MVP() {
-		return mat4{ 1, 0, 0, 0,    
-				     0, 1, 0, 0,    
-				     0, 0, 1, 0,
-				     0, 0, 0, 1 };
+		return mat4{ 1, 0, 0, 0,
+					 0, 1, 0, 0,
+					 0, 0, 1, 0,
+					 0, 0, 0, 1 };
 	}
 
 	float multiply(vec3 p1, vec3 p2) {
-		//if (isnan(p1.x) || isnan(p1.y)) {
-			//p1 = { 0.0f,0.0f,1.0f };
-			//return 0.0f;
-		//}
-		//else {
-			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
-		//}
-		
+		return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
+
 	}
 
 	float distance(vec3 p1, vec3 p2) {
-		//if (isnan(acoshf(-multiply(p1, p2)))) {
-			//return 0.0f;
-		//}
-		//else {
-			return acoshf(-multiply(p1, p2));
-		//}
+		return acoshf(-multiply(p1, p2));
 	}
 
 	bool isEqual(float f1, float f2) {
@@ -215,7 +228,7 @@ public:
 		float d1 = distance(m1, center);
 		vec3 v1 = (m1 - center * coshf(d1)) / sinhf(d1);
 		vec3 p1 = center * coshf(2 * d1) + v1 * sinhf(2 * d1);
-		
+
 		float d2 = distance(p1, m2);
 		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
 		center = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
@@ -225,7 +238,7 @@ public:
 	}
 };
 
-class AllVertices {
+class AllVertices : public Container {
 public:
 	Vertice allVertices[50];
 	AllVertices() {
@@ -246,25 +259,6 @@ public:
 		}
 	}
 
-	float multiply(vec3 p1, vec3 p2) {
-		if (isnan(p1.x) || isnan(p1.y)) {
-			p1 = { 0.0f,0.0f,1.0f };
-			return 0.0f;
-		}
-		else {
-			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
-		}
-
-	}
-
-	float distance(vec3 p1, vec3 p2) {
-		if (isnan(acoshf(-multiply(p1, p2)))) {
-			return 0.0f;
-		}
-		else {
-			return acoshf(-multiply(p1, p2));
-		}
-	}
 
 	bool isEqual(float f1, float f2) {
 		float epsilon = 0.01;
@@ -274,7 +268,7 @@ public:
 		return false;
 	}
 
-	void PushVertices(vec3 q) {
+	void Push(vec3 q) {
 		//Origo es celpont kozti m pont meghatarozas
 		vec3 p1 = { 0.0f,0.0f,1.0f };
 
@@ -298,12 +292,6 @@ public:
 		}
 	}
 
-	mat4 MVP() {
-		return mat4{ 1, 0, 0, 0,     
-					 0, 1, 0, 0,    
-					 0, 0, 1, 0,
-					 0, 0, 0, 1 };
-	}
 
 	Vertice getVertice(int idx) {
 		return allVertices[idx];
@@ -377,7 +365,7 @@ public:
 		Draw();
 	}
 
-	void mirrorp1(vec3 m1, vec3 m2){
+	void mirrorp1(vec3 m1, vec3 m2) {
 		float d1 = distance(m1, this->p1);
 		vec3 v1 = (m1 - this->p1 * coshf(d1)) / sinhf(d1);
 		vec3 p1 = this->p1 * coshf(2 * d1) + v1 * sinhf(2 * d1);
@@ -399,7 +387,7 @@ public:
 
 };
 
-class AllLines {
+class AllLines : public Container {
 private:
 	//1225 grafel lehet osszesen, ennek 5 szazaleka 61
 	Line lines[61];
@@ -416,10 +404,10 @@ public:
 		bool checkIfEdgeExists;
 		int firstIndex, secondIndex;
 
-		while (nextLine !=  60) {
+		while (nextLine != 60) {
 			firstIndex = (rand() * 50) / RAND_MAX;
 			secondIndex = (rand() * (49)) / RAND_MAX;
-			if (secondIndex == firstIndex) 
+			if (secondIndex == firstIndex)
 				continue;
 
 			firstVertice = verticesContainer->allVertices[firstIndex].getCenter();
@@ -456,29 +444,9 @@ public:
 		}
 	}
 
-	float multiply(vec3 p1, vec3 p2) {
-		if (isnan(p1.x) || isnan(p1.y)) {
-			p1 = { 0.0f,0.0f,1.0f };
-			return 0.0f;
-		}
-		else {
-			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
-		}
-
-	}
-
-	float distance(vec3 p1, vec3 p2) {
-		if (isnan(acoshf(-multiply(p1, p2)))) {
-			return 0.0f;
-		}
-		else {
-			return acoshf(-multiply(p1, p2));
-		}
-	}
-
-	void PushLines(vec3 q) {
+	void Push(vec3 q) {
 		//Origo es celpont kozti m pont meghatarozas
-		vec3 p1 = { 0.0f,0.0f,1.0f};
+		vec3 p1 = { 0.0f,0.0f,1.0f };
 
 		float d1 = distance(p1, q);
 		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
@@ -495,7 +463,6 @@ public:
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
 
-	
 
 		for (int ii = 0; ii < 61; ii++) {
 			lines[ii].Mirror(m1, m2);
@@ -540,7 +507,7 @@ void onInitialization() {
 
 
 void onDisplay() {
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);  
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -553,16 +520,14 @@ void onDisplay() {
 
 
 void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'd') glutPostRedisplay();     
+	if (key == 'd') glutPostRedisplay();
 }
 
 
 void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
-
 bool mouseLeftPressed = false;
-
 void onMouseMotion(int pX, int pY) {
 	float cX = 2.0f * pX / windowWidth - 1;
 	float cY = 1.0f - 2.0f * pY / windowHeight;
@@ -571,10 +536,10 @@ void onMouseMotion(int pX, int pY) {
 		float y = cY / sqrtf(1 - cX * cX - cY * cY);
 		float z = 1 / sqrtf(1 - cX * cX - cY * cY);
 		if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
-			verticesContainer->PushVertices(vec3(x, y, z));
-			lines->PushLines(vec3(x, y, z));
+			verticesContainer->Push(vec3(x, y, z));
+			lines->Push(vec3(x, y, z));
 		}
-		
+
 	}
 	glutPostRedisplay();
 }
@@ -592,5 +557,5 @@ void onMouse(int button, int state, int pX, int pY) {
 
 
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME); 
+	long time = glutGet(GLUT_ELAPSED_TIME);
 }
