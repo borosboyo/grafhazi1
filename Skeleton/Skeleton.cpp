@@ -215,7 +215,7 @@ public:
 		vec3 p1 = center * coshf(2 * d1) + v1 * sinhf(2 * d1);
 
 		float d2 = distance(p1, m2);
-		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		vec3 v2 = (m2 - p1 * coshf(d2)) / sinhf(d2);
 		center = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
 
 		setCirclePoints();
@@ -365,7 +365,7 @@ public:
 		vec3 p1 = this->p1 * coshf(2 * d1) + v1 * sinhf(2 * d1);
 
 		float d2 = distance(p1, m2);
-		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		vec3 v2 = (m2 - p1 * coshf(d2)) / sinhf(d2);
 		this->p1 = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
 	}
 
@@ -375,7 +375,7 @@ public:
 		vec3 p1 = this->p2 * coshf(2 * d1) + v1 * sinhf(2 * d1);
 
 		float d2 = distance(p1, m2);
-		vec3 v2 = (m2 - p1 * cosh(d2)) / sinhf(d2);
+		vec3 v2 = (m2 - p1 * coshf(d2)) / sinhf(d2);
 		this->p2 = p1 * coshf(2 * d2) + v2 * sinhf(2 * d2);
 	}
 
