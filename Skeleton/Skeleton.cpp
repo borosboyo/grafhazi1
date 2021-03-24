@@ -183,23 +183,23 @@ public:
 	}
 
 	float multiply(vec3 p1, vec3 p2) {
-		if (isnan(p1.x) || isnan(p1.y)) {
-			p1 = { 0.0f,0.0f,1.0f };
-			return 0.0f;
-		}
-		else {
+		//if (isnan(p1.x) || isnan(p1.y)) {
+			//p1 = { 0.0f,0.0f,1.0f };
+			//return 0.0f;
+		//}
+		//else {
 			return p1.x * p2.x + p1.y * p2.y - p1.z * p2.z;
-		}
+		//}
 		
 	}
 
 	float distance(vec3 p1, vec3 p2) {
-		if (isnan(acoshf(-multiply(p1, p2)))) {
-			return 0.0f;
-		}
-		else {
+		//if (isnan(acoshf(-multiply(p1, p2)))) {
+			//return 0.0f;
+		//}
+		//else {
 			return acoshf(-multiply(p1, p2));
-		}
+		//}
 	}
 
 	bool isEqual(float f1, float f2) {
@@ -292,10 +292,6 @@ public:
 		float d3 = distance(tempP, q);
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
-
-		//printf("X: %3.2f Y: %3.2f Z: %3.2f ", m1.x, m1.y, m1.z);
-		//printf("X: %3.2f Y: %3.2f Z: %3.2f \n", m2.x, m2.y, m2.z);
-
 
 		for (int ii = 0; ii < 50; ii++) {
 			allVertices[ii].Mirror(m1, m2);
@@ -585,16 +581,12 @@ void onMouseMotion(int pX, int pY) {
 
 
 void onMouse(int button, int state, int pX, int pY) {
-	float cX = 2.0f * pX / windowWidth - 1;
-	float cY = 1.0f - 2.0f * pY / windowHeight;
-
 	if (button == GLUT_LEFT_BUTTON) {
 		if (state == GLUT_DOWN) {
 			mouseLeftPressed = true;
 		}
 		else mouseLeftPressed = false;
 	}
-
 
 }
 
