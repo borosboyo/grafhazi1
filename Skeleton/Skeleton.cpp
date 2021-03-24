@@ -37,14 +37,10 @@
 const char* const vertexSource = R"(
     #version 330                // Shader 3.3
     precision highp float;        // normal floats, makes no difference on desktop computers
-
     uniform mat4 MVP;            // uniform variable, the Model-View-Projection transformation matrix
-
     layout(location = 0) in vec3 vp;
 	layout(location = 1) in vec2 vertexUV;
-
 	out vec2 texCoord;
-
     void main() {
 		texCoord = vertexUV;
         gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1 ));
@@ -55,14 +51,10 @@ const char* const vertexSource = R"(
 const char* const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
-
-
 	uniform sampler2D textureUnit;
 	in vec2 texCoord;
-
 	uniform vec3 color;		// uniform variable, the color of the primitive
 	out vec4 fragmentColor;		// computed color of the current pixel
-
 	
 	void main() {
 		fragmentColor = texture(textureUnit, texCoord); // computed color is the color of the primitive
@@ -113,11 +105,8 @@ unsigned int vbo[2];
 /*
 class Tex {
 	Texture tex[50];
-
 public:
-
 	Tex() {
-
 	}
 };
 */
@@ -125,14 +114,6 @@ public:
 
 class Graph {
 public:
-	Graph() {
-		glGenVertexArrays(1, &vao);
-		glBindVertexArray(vao);
-		glGenBuffers(1, &vbo[0]);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	}
-
-
 	virtual void Draw() = 0;
 	~Graph() {
 		glDeleteBuffers(1, &vbo[0]);
@@ -162,17 +143,19 @@ public:
 
 };
 
-
 class Vertice : public Graph {
 public:
-
 	// 16 es 32 kozott legyen
 	vec3 circlePoints[20];
 	vec3 center;
 	float r = 0.05f;
 	vec3 color = vec3(0.5f, 0.5f, 0.5f);
 
-	Vertice() {
+	void initVertice() {
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(1, &vbo[0]);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glBindVertexArray(vao);
@@ -243,7 +226,8 @@ public:
 class AllVertices : public Container {
 public:
 	Vertice allVertices[50];
-	AllVertices() {
+
+	void initVerticeCoord() {
 		for (int ii = 0; ii < 50; ii++) {
 			float x = ((float)rand() / RAND_MAX) * 2.0f - 1;
 			float y = ((float)rand() / RAND_MAX) * 2.0f - 1;
@@ -252,6 +236,7 @@ public:
 			tmp->setCenter(vec3(x, y, z));
 			tmp->setCirclePoints();
 			allVertices[ii] = *tmp;
+			allVertices[ii].initVertice();
 		}
 	}
 
@@ -302,6 +287,7 @@ public:
 
 };
 
+
 AllVertices* verticesContainer;
 
 class Line : public Graph {
@@ -309,11 +295,17 @@ class Line : public Graph {
 	vec3 p2;
 	vec3 color = vec3(1.0f, 1.0f, 0.0f);
 public:
-	Line() {
+	
+	void initLine() {
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+		glGenBuffers(1, &vbo[0]);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glBindVertexArray(vao);
 	}
+
 	void Draw() {
 		vec3 line[2] = { p1,p2 };
 		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
@@ -396,9 +388,6 @@ private:
 	vec3 color;
 
 public:
-	AllLines() {
-		initRandomLines();
-	}
 
 	void initRandomLines() {
 		int nextLine = 0;
@@ -427,6 +416,7 @@ public:
 
 			if (!checkIfEdgeExists) {
 				lines[nextLine].setP1P2(firstVertice, secondVertice);
+				lines[nextLine].initLine();
 			}
 			nextLine++;
 		}
@@ -474,17 +464,18 @@ public:
 };
 
 AllLines* lines;
-Line* myLine;
 
 Texture sample;
 
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 	glLineWidth(5.0f); glPointSize(5.0f);
+
 	verticesContainer = new AllVertices();
+	verticesContainer->initVerticeCoord();
+
 	lines = new AllLines();
-
-
+	lines->initRandomLines();
 
 
 	std::vector<vec4> data;
@@ -511,7 +502,6 @@ void onInitialization() {
 void onDisplay() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
 	lines->DrawLines();
 	verticesContainer->DrawVertices();
