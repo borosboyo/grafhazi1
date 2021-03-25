@@ -1,4 +1,5 @@
 ﻿//=============================================================================================
+// 
 // A beadott program csak ebben a fajlban lehet, a fajl 1 byte-os ASCII karaktereket tartalmazhat, BOM kihuzando.
 // Tilos:
 // - mast "beincludolni", illetve mas konyvtarat hasznalni
@@ -41,7 +42,8 @@ const char* const vertexSource = R"(
 	out vec2 texCoord;
     void main() {
 		texCoord = vertexUV;
-        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1 ));
+        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1);
+//sqrt(vp.x * vp.x + vp.y * vp.y + 1)
     }
 )";
 
@@ -60,14 +62,11 @@ const char* const fragmentSource = R"(
 )";
 
 
-
-GPUProgram gpuProgram;
-
 class Camera {
 	vec2 wCenter;
 	vec2 wSize;
 public:
-	Camera(vec2 wc = vec2(0, 0), vec2 ws = vec2(2, 2)) : wCenter(wc), wSize(ws) {}
+	Camera(vec2 wc = vec2(0, 0), vec2 ws = vec2(1, 1)) : wCenter(wc), wSize(ws) {}
 	mat4 V() {
 		return mat4(1, 0, 0, 0,
 			0, 1, 0, 0,
@@ -94,16 +93,12 @@ public:
 	}
 };
 
+GPUProgram gpuProgram;
 Camera camera;
-
-
 unsigned int vao;
-
-
+unsigned int vbo;
 
 class Graph {
-protected:
-	unsigned int vbo;
 public:
 	virtual void Draw() = 0;
 	~Graph() {
@@ -136,11 +131,9 @@ public:
 
 class Vertice : public Graph {
 public:
-	// 16 es 32 kozott legyen
 	vec3 circlePoints[20];
 	vec3 center;
 	float r = 0.05f;
-	vec3 color = vec3(0.5f, 0.5f, 0.5f);
 
 	void initVertice() {
 		glGenVertexArrays(1, &vao);
@@ -211,6 +204,7 @@ public:
 
 		setCirclePoints();
 		Draw();
+
 	}
 };
 
@@ -252,7 +246,7 @@ public:
 
 		float d1 = distance(p1, q);
 		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
-		vec3 m1 = p1 * coshf(d1 / 300) + v1 * sinhf(d1 / 300);
+		vec3 m1 = p1 * coshf(d1 / 30) + v1 * sinhf(d1 / 30);
 
 		//Lepes ezen az egyenesen 
 		vec3 p2 = p1;
@@ -263,7 +257,9 @@ public:
 		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
 		float d3 = distance(tempP, q);
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
-		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
+		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
+
+		printf("X: %3.2f, Y: %3.2f, Z: %3.2f\n", m1.x, m2.y, m2.z);
 
 		for (int ii = 0; ii < 50; ii++) {
 			allVertices[ii].Mirror(m1, m2);
@@ -284,7 +280,6 @@ AllVertices* verticesContainer;
 class Line : public Graph {
 	vec3 p1;
 	vec3 p2;
-	vec3 color = vec3(1.0f, 1.0f, 0.0f);
 public:
 
 	void initLine() {
@@ -369,7 +364,6 @@ class AllLines : public Container {
 private:
 	//1225 grafel lehet osszesen, ennek 5 szazaleka 61
 	Line lines[61];
-	vec3 color;
 
 public:
 
@@ -407,7 +401,7 @@ public:
 	}
 
 	bool isEqual(vec3 v1, vec3 v2) {
-		float epsilon = 1.19e-7f;;
+		float epsilon = 1.19e-2f;;
 		if ((fabsf(v1.x - v2.x) <= epsilon) && (fabsf(v1.y - v2.y) <= epsilon && (fabsf(v1.z - v2.z) <= epsilon))) {
 			return true;
 		}
@@ -426,7 +420,7 @@ public:
 
 		float d1 = distance(p1, q);
 		vec3 v1 = (q - p1 * coshf(d1)) / sinhf(d1);
-		vec3 m1 = p1 * coshf(d1 / 300) + v1 * sinhf(d1 / 300);
+		vec3 m1 = p1 * coshf(d1 / 30) + v1 * sinhf(d1 / 30);
 
 		//Lepes ezen az egyenesen 
 		vec3 p2 = p1;
@@ -437,7 +431,7 @@ public:
 		//megvan az uj pont: kozte es a celpont kozott keressuk a tavolsagot ami az m2
 		float d3 = distance(tempP, q);
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
-		vec3 m2 = tempP * coshf(d3 / 200) + v3 * sinhf(d3 / 200);
+		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
 
 
 		for (int ii = 0; ii < 61; ii++) {
@@ -449,23 +443,13 @@ public:
 
 AllLines* lines;
 
-Texture sample;
+Texture* sample;
 
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
-	glLineWidth(5.0f); glPointSize(5.0f);
-
-	float MVPtransf[4][4] = { 1, 0, 0, 0,    // MVP matrix, 
-							  0, 1, 0, 0,    // row-major!
-							  0, 0, 1, 0,
-							  0, 0, 0, 1 };
-
-	int location = glGetUniformLocation(gpuProgram.getId(), "MVP");	// Get the GPU location of uniform variable MVP
-	glUniformMatrix4fv(location, 1, GL_TRUE, &MVPtransf[0][0]);	// Load a 4x4 row-major float matrix to the specified location
-
-
-
-
+	glLineWidth(5.0f);
+	glClearColor(0.0f, 0.2f, 0.2f, 1.0f);							// background color 
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen
 
 	verticesContainer = new AllVertices();
 	verticesContainer->initVerticeCoord();
@@ -473,12 +457,11 @@ void onInitialization() {
 	lines = new AllLines();
 	lines->initRandomLines();
 
-
-	std::vector<vec4> data;
-	for (int ii = 0; ii < 100; ii++) {
-		for (int jj = 0; jj < 100; jj++) {
+	/*
+	for (int ii = 0; ii < 10; ii++) {
+		for (int jj = 0; jj < 10; jj++) {
 			//int index = (ii * 100 + ii) * 4;
-			if (((ii / 10) + ii / 10) % 2) {
+			if (((ii / 10) + ii / 100) % 2) {
 				//fosszin
 				data.push_back(vec4(1.0, 0.5, 0, 1.0));
 			}
@@ -487,9 +470,15 @@ void onInitialization() {
 				data.push_back(vec4(0.5, 1.0, 0.5, 1.0));
 			}
 		}
-	}
+	}	
+	*/
 
-	sample.create(100, 100, data);
+	sample = new Texture();
+	std::vector<vec4> data;
+	for (int ii = 0; ii < 3; ii++) {
+		data.push_back(vec4(1.0, 0.5, 1.0));
+	}
+	sample->create(3, 3, data);
 
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
@@ -497,48 +486,47 @@ void onInitialization() {
 
 void onDisplay() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	lines->DrawLines();
 	verticesContainer->DrawVertices();
 
 	glutSwapBuffers();
-
 }
 
 
 void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'd') glutPostRedisplay();
+	//if (key == 'd') glutPostRedisplay();
 }
 
 
 void onKeyboardUp(unsigned char key, int pX, int pY) {
 }
 
-bool mouseLeftPressed = false;
+bool mouseRightPressed = false;
 void onMouseMotion(int pX, int pY) {
-	float cX = 2.0f * pX / windowWidth - 1;
+	float cX = 2.0f * pX / windowWidth - 1.0f;
 	float cY = 1.0f - 2.0f * pY / windowHeight;
-	if (mouseLeftPressed) {
-		float x = cX / sqrtf(1 - cX * cX - cY * cY);
-		float y = cY / sqrtf(1 - cX * cX - cY * cY);
-		float z = 1 / sqrtf(1 - cX * cX - cY * cY);
-		if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
-			verticesContainer->Push(vec3(x, y, z));
-			lines->Push(vec3(x, y, z));
-		}
-
+	if (mouseRightPressed) {
+		float x = cX / sqrtf(1.0f - cX * cX - cY * cY);
+		float y = cY / sqrtf(1.0f - cX * cX - cY * cY);
+		float z = 1.0f / sqrtf(1.0f - cX * cX - cY * cY);
+		float sum = x * x + y * y - z * z;
+			if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
+				verticesContainer->Push(vec3(x, y, z));
+				lines->Push(vec3(x, y, z));
+				glutPostRedisplay();
+			}
 	}
-	glutPostRedisplay();
 }
 
 
 void onMouse(int button, int state, int pX, int pY) {
-	if (button == GLUT_LEFT_BUTTON) {
+	if (button == GLUT_RIGHT_BUTTON) {
 		if (state == GLUT_DOWN) {
-			mouseLeftPressed = true;
+			mouseRightPressed = true;
 		}
-		else mouseLeftPressed = false;
+		else mouseRightPressed = false;
 	}
 
 }
