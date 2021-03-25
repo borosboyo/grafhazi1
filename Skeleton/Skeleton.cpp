@@ -38,12 +38,9 @@ const char* const vertexSource = R"(
     precision highp float;        // normal floats, makes no difference on desktop computers
     uniform mat4 MVP;            // uniform variable, the Model-View-Projection transformation matrix
     layout(location = 0) in vec3 vp;
-	layout(location = 1) in vec2 vertexUV;
-	out vec2 texCoord;
+
     void main() {
-		texCoord = vertexUV;
         gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1)) ;
-//sqrt(vp.x * vp.x + vp.y * vp.y + 1)
     }
 )";
 
@@ -51,13 +48,12 @@ const char* const vertexSource = R"(
 const char* const fragmentSource = R"(
 	#version 330			// Shader 3.3
 	precision highp float;	// normal floats, makes no difference on desktop computers
-	uniform sampler2D textureUnit;
-	in vec2 texCoord;
+
 	uniform vec3 color;		// uniform variable, the color of the primitive
 	out vec4 fragmentColor;		// computed color of the current pixel
 	
 	void main() {
-		fragmentColor = texture(textureUnit, texCoord); // computed color is the color of the primitive
+		fragmentColor = vec4(color,1); // computed color is the color of the primitive
 	}
 )";
 
@@ -134,6 +130,7 @@ public:
 	vec3 circlePoints[20];
 	vec3 center;
 	float r = 0.05f;
+	vec3 color = { 0.5f,0.5f,0.5f };
 
 	void initVertice() {
 		glGenVertexArrays(1, &vao);
@@ -146,6 +143,7 @@ public:
 	}
 
 	void Draw() {
+		gpuProgram.setUniform(color, "color");
 		glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(vec3), &circlePoints[0], GL_STATIC_DRAW);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 20);
 	}
@@ -259,27 +257,23 @@ public:
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
 
-		//printf("X: %3.2f, Y: %3.2f, Z: %3.2f\n", m1.x, m2.y, m2.z);
-
 		for (int ii = 0; ii < 50; ii++) {
 			allVertices[ii].Mirror(m1, m2);
 		}
 	}
 
-
 	Vertice getVertice(int idx) {
 		return allVertices[idx];
 	}
 
-
 };
-
-
-AllVertices* verticesContainer;
 
 class Line : public Graph {
 	vec3 p1;
 	vec3 p2;
+	vec3 color = { 1.0f,1.0f,0.0f };
+
+
 public:
 
 	void initLine() {
@@ -294,6 +288,7 @@ public:
 
 	void Draw() {
 		vec3 line[2] = { p1,p2 };
+		gpuProgram.setUniform(color, "color");
 		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(vec3), line, GL_STATIC_DRAW);
 		glLineWidth(2);
 		glDrawArrays(GL_LINES, 0, 2);
@@ -367,15 +362,15 @@ private:
 
 public:
 
-	void initRandomLines() {
+	void initRandomLines(AllVertices* vc) {
 		vec3 start, end;
 		int firstIndex, secondIndex;
 
 		for (int ii = 0; ii < 61; ii++) {
 			firstIndex = (rand() * 50) / RAND_MAX;
 			secondIndex = (rand() * (49)) / RAND_MAX;
-			start = verticesContainer->allVertices[firstIndex].getCenter();
-			end = verticesContainer->allVertices[secondIndex].getCenter();
+			start = vc->getVertice(firstIndex).getCenter();
+			end = vc->getVertice(secondIndex).getCenter();
 			lines[ii].setP1P2(start, end);
 			lines[ii].initLine();
 		}
@@ -422,45 +417,23 @@ public:
 
 };
 
+AllVertices* verticesContainer;
 AllLines* lines;
-
-Texture* sample;
 
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
-	glLineWidth(5.0f);
-	glClearColor(0.0f, 0.2f, 0.2f, 1.0f);							// background color 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen
+	glLineWidth(1.0f);
+	glClearColor(0.0f, 0.2f, 0.2f, 1.0f);							
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 	verticesContainer = new AllVertices();
 	verticesContainer->initVerticeCoord();
 
 	lines = new AllLines();
-	lines->initRandomLines();
-
-
-	std::vector<vec4> data;
-	for (int ii = 0; ii < 10; ii++) {
-		for (int jj = 0; jj < 10; jj++) {
-			int index = (ii * 100 + ii) * 4;
-			if (((ii / 10) + ii / 100) % 2) {
-				//fosszin
-				data.push_back(vec4(1.0, 0.5, 0, 1.0));
-			}
-			else {
-				//mas szin
-				data.push_back(vec4(0.5, 1.0, 0.5, 1.0));
-			}
-		}
-	}	
-
-	sample = new Texture();
-
-	sample->create(3, 3, data);
+	lines->initRandomLines(verticesContainer);
 
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
-
 
 void onDisplay() {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -474,7 +447,9 @@ void onDisplay() {
 
 
 void onKeyboard(unsigned char key, int pX, int pY) {
-	//if (key == 'd') glutPostRedisplay();
+	if (key == ' ') {
+		glutPostRedisplay();
+	}
 }
 
 
@@ -489,12 +464,11 @@ void onMouseMotion(int pX, int pY) {
 		float x = cX / sqrtf(1.0f - cX * cX - cY * cY);
 		float y = cY / sqrtf(1.0f - cX * cX - cY * cY);
 		float z = 1.0f / sqrtf(1.0f - cX * cX - cY * cY);
-		float sum = x * x + y * y - z * z;
-			if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
-				verticesContainer->Push(vec3(x, y, z));
-				lines->Push(vec3(x, y, z));
-				glutPostRedisplay();
-			}
+		if (!verticesContainer->isEqual(x, 0.0f) && !verticesContainer->isEqual(y, 0.0f) && !verticesContainer->isEqual(z, 1.0f)) {
+			verticesContainer->Push(vec3(x, y, z));
+			lines->Push(vec3(x, y, z));
+			glutPostRedisplay();
+		}
 	}
 }
 
@@ -511,5 +485,5 @@ void onMouse(int button, int state, int pX, int pY) {
 
 
 void onIdle() {
-	//long time = glutGet(GLUT_ELAPSED_TIME);
+	
 }
