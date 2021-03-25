@@ -42,7 +42,7 @@ const char* const vertexSource = R"(
 	out vec2 texCoord;
     void main() {
 		texCoord = vertexUV;
-        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, 1);
+        gl_Position = vec4(vp.x/vp.z, vp.y/vp.z, 0, sqrt(vp.x * vp.x + vp.y * vp.y + 1)) ;
 //sqrt(vp.x * vp.x + vp.y * vp.y + 1)
     }
 )";
@@ -66,7 +66,7 @@ class Camera {
 	vec2 wCenter;
 	vec2 wSize;
 public:
-	Camera(vec2 wc = vec2(0, 0), vec2 ws = vec2(1, 1)) : wCenter(wc), wSize(ws) {}
+	Camera(vec2 wc = vec2(0, 0), vec2 ws = vec2(2, 2)) : wCenter(wc), wSize(ws) {}
 	mat4 V() {
 		return mat4(1, 0, 0, 0,
 			0, 1, 0, 0,
@@ -259,7 +259,7 @@ public:
 		vec3 v3 = (q - tempP * coshf(d3)) / sinhf(d3);
 		vec3 m2 = tempP * coshf(d3 / 20) + v3 * sinhf(d3 / 20);
 
-		printf("X: %3.2f, Y: %3.2f, Z: %3.2f\n", m1.x, m2.y, m2.z);
+		//printf("X: %3.2f, Y: %3.2f, Z: %3.2f\n", m1.x, m2.y, m2.z);
 
 		for (int ii = 0; ii < 50; ii++) {
 			allVertices[ii].Mirror(m1, m2);
@@ -368,35 +368,16 @@ private:
 public:
 
 	void initRandomLines() {
-		int nextLine = 0;
-		vec3 firstVertice, secondVertice;
-		bool checkIfEdgeExists;
+		vec3 start, end;
 		int firstIndex, secondIndex;
 
-		while (nextLine != 60) {
+		for (int ii = 0; ii < 61; ii++) {
 			firstIndex = (rand() * 50) / RAND_MAX;
 			secondIndex = (rand() * (49)) / RAND_MAX;
-			if (secondIndex == firstIndex)
-				continue;
-
-			firstVertice = verticesContainer->allVertices[firstIndex].getCenter();
-			secondVertice = verticesContainer->allVertices[secondIndex].getCenter();
-			checkIfEdgeExists = false;
-
-			for (int ii = 0; ii < 50; ii++) {
-				if (isEqual(lines[ii].getP1(), firstVertice) && isEqual(lines[ii].getP2(), secondVertice)) {
-					checkIfEdgeExists = true;
-				}
-				else if (isEqual(lines[ii].getP2(), firstVertice) && isEqual(lines[ii].getP1(), secondVertice)) {
-					checkIfEdgeExists = true;
-				}
-			}
-
-			if (!checkIfEdgeExists) {
-				lines[nextLine].setP1P2(firstVertice, secondVertice);
-				lines[nextLine].initLine();
-			}
-			nextLine++;
+			start = verticesContainer->allVertices[firstIndex].getCenter();
+			end = verticesContainer->allVertices[secondIndex].getCenter();
+			lines[ii].setP1P2(start, end);
+			lines[ii].initLine();
 		}
 	}
 
@@ -457,10 +438,11 @@ void onInitialization() {
 	lines = new AllLines();
 	lines->initRandomLines();
 
-	/*
+
+	std::vector<vec4> data;
 	for (int ii = 0; ii < 10; ii++) {
 		for (int jj = 0; jj < 10; jj++) {
-			//int index = (ii * 100 + ii) * 4;
+			int index = (ii * 100 + ii) * 4;
 			if (((ii / 10) + ii / 100) % 2) {
 				//fosszin
 				data.push_back(vec4(1.0, 0.5, 0, 1.0));
@@ -471,13 +453,9 @@ void onInitialization() {
 			}
 		}
 	}	
-	*/
 
 	sample = new Texture();
-	std::vector<vec4> data;
-	for (int ii = 0; ii < 3; ii++) {
-		data.push_back(vec4(1.0, 0.5, 1.0));
-	}
+
 	sample->create(3, 3, data);
 
 	gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
